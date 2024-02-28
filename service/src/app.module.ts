@@ -11,6 +11,7 @@ import { UserModule } from './user/user.module';
   imports: [
     ConfigModule.forRoot({
       envFilePath: ['.env.development.local', '.env'],
+      isGlobal: true,
     }),
     Neo4jModule.forRootAsync({
       imports: [ConfigModule],

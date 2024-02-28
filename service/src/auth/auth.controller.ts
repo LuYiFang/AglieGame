@@ -20,18 +20,31 @@ export class AuthController {
     private readonly userService: UserService,
   ) {}
 
-  @UseGuards(AuthGuard('local'))
+  // @UseGuards(AuthGuard('local'))
   @Post('login')
   @ApiBody({ type: LoginDto })
-  async login(@Request() req, @Res({ passthrough: true }) res: Response) {
-    this.authService.login(res, req.user, req.user.id);
-    return req.user.username;
+  async login(
+    @Request() req,
+    @Res({ passthrough: true }) res: Response,
+    @Body() loginDto: LoginDto,
+  ) {
+    const jwt = await this.authService.login(
+      res,
+      loginDto.username,
+      loginDto.password,
+    );
+    res.cookie('token', jwt);
+    return loginDto.username;
   }
 
   @Post('signup')
   @ApiBody({ type: LoginDto })
-  async signup(@Body() loginDto: LoginDto) {
-    this.userService.createUser(loginDto);
-    return;
+  async signup(
+    @Res({ passthrough: true }) res: Response,
+    @Body() loginDto: LoginDto,
+  ) {
+    const jwt = await this.authService.signup(loginDto);
+    res.cookie('token', jwt);
+    return loginDto.username;
   }
 }
