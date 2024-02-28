@@ -11,6 +11,6 @@ export class AppController {
 
   @Get()
   getHello() {
-    return { hello: this.configService.get('USERNAME') };
+    return this.appService.getHello();
   }
 }

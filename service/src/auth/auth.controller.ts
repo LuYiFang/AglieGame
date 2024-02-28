@@ -10,7 +10,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { ApiBody } from '@nestjs/swagger';
 import { LoginDto } from './dto/auth.dto';
-import { UserService } from 'src/user/user.service';
+import { UserService } from '../user/user.service';
 import { Response } from 'express';
 
 @Controller('auth')

@@ -11,7 +11,7 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
 import { LoginDto } from './dto/auth.dto';
-import { UserService } from 'src/user/user.service';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class AuthService {
@@ -22,36 +22,21 @@ export class AuthService {
   ) {}
 
   async validateUser(username: string, password: string): Promise<any> {
-    const user = await this.neo4jService.read(
-      `MATCH (u:User {username: $username}) RETURN u`,
-      { username },
-    );
-    if (!user) {
-      return false;
-    }
+    const user = await this.userService.findUser(username, [
+      'username',
+      'password',
+    ]);
 
-    const userObject = user.records[0]?.get('u');
-    if (!userObject) throw new NotFoundException('User not found.');
-
-    const userProperties = userObject.properties;
-    if (!userProperties) throw new NotFoundException('User not found.');
-
-    const isValidPassword = await bcrypt.compare(
-      password,
-      userProperties.password,
-    );
-
+    const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       throw new UnauthorizedException('Invalid password');
     }
 
-    return { username: userProperties.username, id: userObject.elementId };
+    return { username: user.username, id: user.id };
   }
 
   createJWT(username: string, id: string) {
-    return {
-      access_token: this.jwtService.sign({ username, id }),
-    };
+    return this.jwtService.sign({ username, id });
   }
 
   validateToken(token: string) {
@@ -67,7 +52,6 @@ export class AuthService {
       username,
       password,
     );
-
     return this.createJWT(validUsername, id);
   }
 
