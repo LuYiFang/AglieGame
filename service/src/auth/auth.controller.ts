@@ -47,4 +47,12 @@ export class AuthController {
     res.cookie('token', jwt);
     return loginDto.username;
   }
+
+  @Post('logout')
+  async logout(
+    @Res({ passthrough: true }) res: Response
+  ) {
+    await this.authService.logout()
+    res.clearCookie('token');
+  }
 }

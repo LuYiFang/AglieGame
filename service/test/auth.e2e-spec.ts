@@ -88,6 +88,12 @@ describe('AppController (e2e)', () => {
       .expect(400)
   });
 
+  it('/auth/logout (POST)', () => {
+    return request(app.getHttpServer())
+      .post('/auth/logout')
+      .expect(201)
+  });
+
   afterEach(async () => {
     await app.close();
   });

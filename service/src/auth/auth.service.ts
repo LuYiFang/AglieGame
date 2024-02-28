@@ -65,4 +65,8 @@ export class AuthService {
     const jwt = this.createJWT(username, id);
     return jwt;
   }
+
+  async logout() {
+    // do some logout thing
+  }
 }
