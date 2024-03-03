@@ -3,9 +3,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Neo4jModule } from 'nest-neo4j';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { EventGateway } from './websockets/event.gateway';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
+import { EventModule } from './event/event.module';
 
 @Module({
   imports: [
@@ -26,8 +26,9 @@ import { UserModule } from './user/user.module';
     }),
     AuthModule,
     UserModule,
+    PermissionModule,
   ],
   controllers: [AppController],
-  providers: [AppService, EventGateway],
+  providers: [AppService],
 })
 export class AppModule {}

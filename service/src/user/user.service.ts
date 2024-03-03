@@ -7,8 +7,10 @@ import { CreateUserDto } from './dto/user.dto';
 import * as bcrypt from 'bcrypt';
 import { User } from './interfaces/user.interface';
 import { Neo4jService } from 'nest-neo4j/dist';
-import _ from 'lodash';
 import { ConfigService } from '@nestjs/config';
+import * as _ from 'lodash';
+import { HandleNeo4jResult } from '../common/decorators/extract-neo4j-record.decorator';
+import { Neo4jExtractSingle } from 'src/common/interfaces/common.interface';
 
 @Injectable()
 export class UserService {
@@ -17,32 +19,29 @@ export class UserService {
     private readonly configService: ConfigService,
   ) {}
 
-  async queryUser(
-    username: string,
-    properties: Array<string> = [],
-  ): Promise<{ [key: string]: any } | null> {
-    const user = await this.neo4jService.read(
+  @HandleNeo4jResult(false)
+  async queryUser(username: string): Neo4jExtractSingle {
+    return await this.neo4jService.read(
       `MATCH (u:User {username: $username}) RETURN u`,
       { username },
     );
-    if (!user) {
-      return null;
-    }
+  }
 
-    const userObject = user.records[0]?.get('u');
-    if (!userObject) return null;
+  async getUser(
+    username: string,
+    properties: Array<string> = ['id'],
+  ): Promise<{ [key: string]: any } | null> {
+    const data = await this.queryUser(username);
+    if (!data) return null;
 
-    const userProperties = userObject.properties;
-    if (!userProperties) return null;
-
-    return { id: userObject.elementId, ..._.pick(userProperties, properties) };
+    return _.pick(data, properties);
   }
 
   async findUser(
     username: string,
     properties: Array<string> = [],
   ): Promise<Record<string, any>> {
-    const user = await this.queryUser(username, properties);
+    const user = await this.getUser(username, properties);
     if (!user) {
       throw new NotFoundException('User not found.');
     }
@@ -50,7 +49,7 @@ export class UserService {
   }
 
   async checkUserExist(username: string): Promise<boolean> {
-    const user = await this.queryUser(username);
+    const user = await this.getUser(username);
     if (!user) {
       return false;
     }

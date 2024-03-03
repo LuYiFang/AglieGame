@@ -6,8 +6,9 @@ import { INestApplication } from '@nestjs/common';
 import { UserService } from '../src/user/user.service';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
+import * as _ from 'lodash';
 
-describe('AppController (e2e)', () => {
+describe('AuthController (e2e)', () => {
   let app: INestApplication;
   let neo4jService: Neo4jService;
   let userService: UserService;
@@ -17,11 +18,21 @@ describe('AppController (e2e)', () => {
     configService = new ConfigService();
     userService = new UserService(neo4jService, configService);
 
+    const userServiceMethods = _.reduce(
+      Object.getOwnPropertyNames(Object.getPrototypeOf(userService)),
+      (pre, method) => {
+        pre[method] = userService[method];
+        return pre;
+      },
+      {},
+    );
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(UserService)
       .useValue({
+        ...userServiceMethods,
         queryUser: jest
           .fn()
           .mockImplementation(async (username, properties) => {
@@ -38,8 +49,6 @@ describe('AppController (e2e)', () => {
               return null;
             }
           }),
-        findUser: userService.findUser,
-        checkUserExist: userService.checkUserExist,
         createUser: jest.fn().mockResolvedValue({
           id: 'new_id',
           username: 'newUser',
@@ -85,13 +94,11 @@ describe('AppController (e2e)', () => {
     return request(app.getHttpServer())
       .post('/auth/signup')
       .send({ username: 'testUser', password: 'newpassword' })
-      .expect(400)
+      .expect(400);
   });
 
   it('/auth/logout (POST)', () => {
-    return request(app.getHttpServer())
-      .post('/auth/logout')
-      .expect(201)
+    return request(app.getHttpServer()).post('/auth/logout').expect(201);
   });
 
   afterEach(async () => {

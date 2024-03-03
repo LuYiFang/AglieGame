@@ -20,7 +20,6 @@ export class AuthController {
     private readonly userService: UserService,
   ) {}
 
-  // @UseGuards(AuthGuard('local'))
   @Post('login')
   @ApiBody({ type: LoginDto })
   async login(
@@ -33,7 +32,7 @@ export class AuthController {
       loginDto.username,
       loginDto.password,
     );
-    res.cookie('token', jwt);
+    res.cookie('token', jwt, { maxAge: 60 * 60 * 1000 });
     return loginDto.username;
   }
 
@@ -44,15 +43,13 @@ export class AuthController {
     @Body() loginDto: LoginDto,
   ) {
     const jwt = await this.authService.signup(loginDto);
-    res.cookie('token', jwt);
+    res.cookie('token', jwt, { maxAge: 60 * 60 * 1000 });
     return loginDto.username;
   }
 
   @Post('logout')
-  async logout(
-    @Res({ passthrough: true }) res: Response
-  ) {
-    await this.authService.logout()
+  async logout(@Res({ passthrough: true }) res: Response) {
+    await this.authService.logout();
     res.clearCookie('token');
   }
 }
