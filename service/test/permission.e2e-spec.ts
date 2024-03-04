@@ -1,10 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
 import { AppModule } from '../src/app.module';
 import * as request from 'supertest';
 import { Neo4jService } from 'nest-neo4j/dist';
-import { INestApplication } from '@nestjs/common';
-import { PermissionService } from '../src/permission/permission.service';
 import { ConfigService } from '@nestjs/config';
+import { ProjectService } from '../src/project/project.service';
+import { UserService } from '../src/user/user.service';
+import { PermissionService } from '../src/permission/permission.service';
 import * as _ from 'lodash';
 
 const API_PREFIX = 'permission';
@@ -12,14 +14,21 @@ const API_PREFIX = 'permission';
 describe('PermissionController (e2e)', () => {
   let app: INestApplication;
   let neo4jService: Neo4jService;
-  let permissionService: PermissionService;
   let configService: ConfigService;
+  let userService: UserService;
+  let projectService: ProjectService;
+  let permissionService: PermissionService;
 
   beforeEach(async () => {
     configService = new ConfigService();
-    permissionService = new PermissionService(neo4jService);
+    projectService = new ProjectService(
+      neo4jService,
+      configService,
+      userService,
+    );
+    permissionService = new PermissionService(neo4jService, projectService);
 
-    const permissionServiceMethods = _.reduce(
+    const permissionServiceMethods: { [key: string]: any } = _.reduce(
       Object.getOwnPropertyNames(Object.getPrototypeOf(permissionService)),
       (pre, method) => {
         pre[method] = permissionService[method];
@@ -34,25 +43,52 @@ describe('PermissionController (e2e)', () => {
       .overrideProvider(PermissionService)
       .useValue({
         ...permissionServiceMethods,
+        projectService: {
+          checkProjectExist: jest.fn().mockImplementation(async (projectId) => {
+            if (projectId == 'existProject') return true;
+            return false;
+          }),
+        },
         queryPermissions: jest.fn().mockImplementation(async () => {
           return _.map(
             configService.get('DEFAULT_PERMISSIONS').split(','),
             (v) => ({ name: v }),
           );
         }),
-        queryRole: jest.fn().mockImplementation(async (name, permission) => {
-          if (name === 'testRole') return undefined;
+        queryRole: jest.fn().mockImplementation(async (projectId, name) => {
+          if (name === 'newRole') return undefined;
           return { id: 'role_id' };
         }),
         queryRoles: jest.fn().mockImplementation(async () => {
           return _.map(['DM', 'player', 'PO'], (v) => ({ name: v }));
         }),
-        queryUserRoles: jest.fn().mockImplementation(async () => {
+        queryProjectUserRoles: jest.fn().mockImplementation(async () => {
           return _.map(['DM', 'player'], (v) => ({ name: v }));
         }),
-        queryRolePermissions: jest.fn().mockImplementation(async () => {
-          return _.map(['read', 'create', 'write'], (v) => ({ name: v }));
-        }),
+        queryProjectAllRolePermissions: jest
+          .fn()
+          .mockImplementation(async () => {
+            return {
+              records: [
+                {
+                  get: (key: string) => {
+                    return {
+                      Role: 'DM',
+                      Permissions: ['read', 'write'],
+                    }[key];
+                  },
+                },
+                {
+                  get: (key: string) => {
+                    return {
+                      Role: 'PO',
+                      Permissions: ['read'],
+                    }[key];
+                  },
+                },
+              ],
+            };
+          }),
         checkPermissionExist: jest.fn().mockImplementation(async () => {
           return 2;
         }),
@@ -75,36 +111,73 @@ describe('PermissionController (e2e)', () => {
   it(`/${API_PREFIX}/role (POST)`, () => {
     return request(app.getHttpServer())
       .post(`/${API_PREFIX}/role`)
-      .send({ name: 'testRole', permissions: ['read', 'write'] })
+      .send({
+        projectId: 'existProject',
+        name: 'newRole',
+        permissions: ['read', 'write'],
+      })
       .expect(201);
+  });
+
+  it(`/${API_PREFIX}/role (POST) project not exist`, () => {
+    return request(app.getHttpServer())
+      .post(`/${API_PREFIX}/role`)
+      .send({
+        projectId: 'notExistProject',
+        name: 'DM',
+        permissions: ['read', 'write'],
+      })
+      .expect(400);
   });
 
   it(`/${API_PREFIX}/role (POST) role exist`, () => {
     return request(app.getHttpServer())
       .post(`/${API_PREFIX}/role`)
-      .send({ name: 'DM', permissions: ['read', 'write'] })
+      .send({
+        projectId: 'existProject',
+        name: 'DM',
+        permissions: ['read', 'write'],
+      })
       .expect(400);
   });
 
   it(`/${API_PREFIX}/role (POST) permission not exist`, () => {
     return request(app.getHttpServer())
       .post(`/${API_PREFIX}/role`)
-      .send({ name: 'testRole', permissions: ['read', 'carry', 'create'] })
+      .send({
+        projectId: 'existProject',
+        name: 'testRole',
+        permissions: ['read', 'carry', 'create'],
+      })
       .expect(400);
   });
 
-  it(`/${API_PREFIX}/role (GET)`, () => {
+  it(`/${API_PREFIX}/project/:projectId/roles (GET)`, () => {
     return request(app.getHttpServer())
-      .get(`/${API_PREFIX}/role`)
+      .get(`/${API_PREFIX}/project/existProject/roles`)
       .expect(200)
       .expect(['DM', 'player', 'PO']);
   });
 
-  it(`/${API_PREFIX}/role/:name (GET)`, () => {
+  it(`/${API_PREFIX}/project/:projectId/user/:username/roles (GET)`, () => {
     return request(app.getHttpServer())
-      .get(`/${API_PREFIX}/role/testRole`)
+      .get(`/${API_PREFIX}/project/existProject/user/User1/roles`)
       .expect(200)
-      .expect(['read', 'create', 'write']);
+      .expect(['DM', 'player']);
+  });
+
+  it(`/${API_PREFIX}/project/:projectId/roles/permissions (GET)`, () => {
+    return request(app.getHttpServer())
+      .get(`/${API_PREFIX}/project/existProject/roles/permissions`)
+      .expect(200)
+      .expect({ DM: ['read', 'write'], PO: ['read'] });
+  });
+
+  it(`/${API_PREFIX}/project/:projectId/role/:name (GET)`, () => {
+    return request(app.getHttpServer())
+      .get(`/${API_PREFIX}/project/existProject/roles/permissions`)
+      .expect(200)
+      .expect({ DM: ['read', 'write'], PO: ['read'] });
   });
 
   afterEach(async () => {

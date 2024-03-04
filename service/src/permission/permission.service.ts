@@ -6,10 +6,14 @@ import {
   Neo4jExtractMany,
   Neo4jExtractSingle,
 } from '../common/interfaces/common.interface';
+import { ProjectService } from '../project/project.service';
 
 @Injectable()
 export class PermissionService {
-  constructor(private readonly neo4jService: Neo4jService) {}
+  constructor(
+    private readonly neo4jService: Neo4jService,
+    private readonly projectService: ProjectService,
+  ) {}
 
   async createPermission(name: string) {
     try {
@@ -33,51 +37,61 @@ export class PermissionService {
   }
 
   @HandleNeo4jResult(false)
-  async queryRole(name: string): Neo4jExtractSingle {
+  async queryRole(projectId: string, name: string): Neo4jExtractSingle {
     return await this.neo4jService.read(
-      `MATCH (u:Role {name: $name}) RETURN (u)`,
-      { name },
+      `MATCH (u:Role {uniqueId: $projectId + $name}) RETURN (u)`,
+      { projectId, name },
     );
   }
 
   @HandleNeo4jResult()
-  async queryRoles(): Neo4jExtractMany {
-    return await this.neo4jService.read(`MATCH (u:Role) RETURN (u)`);
-  }
-
-  async getAllRoles() {
-    const data = await this.queryRoles();
-    return _.map(data, (v) => v.name);
-  }
-
-  @HandleNeo4jResult()
-  async queryUserRoles(username: string): Neo4jExtractMany {
+  async queryRoles(projectId: string): Neo4jExtractMany {
     return await this.neo4jService.read(
-      `
-    MATCH (:User {username: $username})-[:HAS_ROLE]->(u:Role) RETURN (u)
-    `,
-      { username },
+      `MATCH (u:Role {projectId: $projectId}) RETURN (u)`,
+      { projectId },
     );
   }
 
-  async getUserRoles(username: string) {
-    const data = await this.queryUserRoles(username);
+  async getProjectAllRoles(projectId: string) {
+    const data = await this.queryRoles(projectId);
     return _.map(data, (v) => v.name);
   }
 
   @HandleNeo4jResult()
-  async queryRolePermissions(name: string): Neo4jExtractMany {
+  async queryProjectUserRoles(
+    projectId: string,
+    username: string,
+  ): Neo4jExtractMany {
     return await this.neo4jService.read(
       `
-    MATCH (:Role {name: $name})-[:HAS_PERMISSION]->(u:Permission) RETURN (u)
+    MATCH (:User {username: $username})-[:IS_ROLE]->(u:Role {projectId: $projectId}) RETURN (u)
     `,
-      { name },
+      { username, projectId },
     );
   }
 
-  async getRolePermissions(name: string) {
-    const data = await this.queryRolePermissions(name);
+  async getProjectUserRoles(projectId: string, username: string) {
+    const data = await this.queryProjectUserRoles(projectId, username);
     return _.map(data, (v) => v.name);
+  }
+
+  async queryProjectAllRolePermissions(projectId: string): Neo4jExtractMany {
+    return await this.neo4jService.read(
+      `
+      MATCH (r:Role {projectId: $projectId})-[:HAS_PERMISSION]->(p:Permission)
+      RETURN r.name AS Role, collect(p.name) AS Permissions
+    `,
+      { projectId },
+    );
+  }
+
+  async getProjectAllRolePermissions(projectId: string) {
+    const data = await this.queryProjectAllRolePermissions(projectId);
+    let targetData = {};
+    _.each(data.records, (v) => {
+      targetData[v.get('Role')] = v.get('Permissions');
+    });
+    return targetData;
   }
 
   async checkPermissionExist(permissions: Array<string>) {
@@ -94,22 +108,29 @@ export class PermissionService {
     return existPermissions.records[0]?.get('u').length;
   }
 
-  async writeRole(name: string, permissions: Array<string>) {
+  async writeRole(projectId: string, name: string, permissions: Array<string>) {
     await this.neo4jService.write(
       `
-            CREATE (r:Role {name: $name}) 
+            CREATE (r:Role {name: $name, projectId: $projectId, uniqueId: $projectId + $name}) 
             WITH r
             MATCH (p:Permission) 
             WHERE p.name IN $permissions
             CREATE (r)-[:HAS_PERMISSION]->(p)
         `,
-      { name, permissions },
+      { projectId, name, permissions },
     );
   }
 
-  async createRole(name: string, permissions: Array<string>) {
-    const role = await this.queryRole(name);
+  async createRole(
+    projectId: string,
+    name: string,
+    permissions: Array<string>,
+  ) {
+    if (!(await this.projectService.checkProjectExist(projectId))) {
+      throw new BadRequestException('Project not exists');
+    }
 
+    const role = await this.queryRole(projectId, name);
     if (role) {
       throw new BadRequestException('Role already exists');
     }
@@ -119,13 +140,17 @@ export class PermissionService {
       throw new BadRequestException('Permission not exists');
     }
 
-    await this.writeRole(name, permissions);
+    await this.writeRole(projectId, name, permissions);
   }
 
-  async updateRole(name: string, permissions: Array<string>) {
+  async updateRole(
+    projectId: string,
+    name: string,
+    permissions: Array<string>,
+  ) {
     await this.neo4jService.write(
       `
-        MATCH (r:Role {name: $name})-[rel:HAS_PERMISSION]->(p:Permission)
+        MATCH (r:Role {uniqueId: $projectId + $name})-[rel:HAS_PERMISSION]->(p:Permission)
         WITH r, collect(p.name) AS oldPermissions, $permissions AS newPermissions
         CALL {
           WITH r, oldPermissions, newPermissions
@@ -146,17 +171,17 @@ export class PermissionService {
         RETURN r
         
           `,
-      { name, permissions },
+      { projectId, name, permissions },
     );
   }
 
-  async deleteRole(name: string) {
+  async deleteRole(projectId: string, name: string) {
     await this.neo4jService.write(
       `
-            MATCH (r:Role {name: $name}) 
+            MATCH (r:Role {uniqueId: $projectId + $name}) 
             DETACH DELETE r
         `,
-      { name },
+      { projectId, name },
     );
   }
 }

@@ -19,7 +19,14 @@ export class AppService implements OnModuleInit {
     await this.createUserUniqueConstraint();
     await this.createPermissionUniqueConstraint();
     await this.createInitPermissions();
-    await this.createRoleUniqueConstraint();
+    await this.initRole();
+    this.initProject();
+  }
+
+  async initProject() {
+    this.neo4jService.write(
+      'CREATE INDEX project_name_uuid_index IF NOT EXISTS FOR (r:Project) ON (r.name, r.uuid)',
+    );
   }
 
   async createUserUniqueConstraint() {
@@ -36,12 +43,15 @@ export class AppService implements OnModuleInit {
     }
   }
 
-  async createRoleUniqueConstraint() {
+  async initRole() {
     try {
       await this.neo4jService.write(
         `
-        CREATE CONSTRAINT RoleNameUnique IF NOT EXISTS FOR (u:Role) REQUIRE u.name IS UNIQUE
+        CREATE CONSTRAINT RoleUniqueIdUnique IF NOT EXISTS FOR (u:Role) REQUIRE u.uniqueId IS UNIQUE
         `,
+      );
+      this.neo4jService.write(
+        'CREATE INDEX role_name_projectId_index IF NOT EXISTS FOR (r:Role) ON (r.name, r.projectId)',
       );
     } catch (error) {
       throw new InternalServerErrorException('Error when init database', {

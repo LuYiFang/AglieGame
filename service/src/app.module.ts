@@ -6,6 +6,8 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { EventModule } from './event/event.module';
+import { PermissionModule } from './permission/permission.module';
+import { ProjectModule } from './project/project.module';
 
 @Module({
   imports: [
@@ -26,7 +28,9 @@ import { EventModule } from './event/event.module';
     }),
     AuthModule,
     UserModule,
+    EventModule,
     PermissionModule,
+    ProjectModule,
   ],
   controllers: [AppController],
   providers: [AppService],
