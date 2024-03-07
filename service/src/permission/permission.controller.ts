@@ -12,7 +12,11 @@ import {
 } from '@nestjs/common';
 import { PermissionService } from './permission.service';
 import { ApiBody } from '@nestjs/swagger';
-import { CreateRoleDto, UpdateRoleDto } from './dto/permission.dto';
+import {
+  AssignRoleDto,
+  CreateRoleDto,
+  UpdateRoleDto,
+} from './dto/permission.dto';
 
 @Controller('permission')
 export class PermissionController {
@@ -20,7 +24,7 @@ export class PermissionController {
 
   @Get()
   async getAllPermission() {
-    return await this.permissionService.getAllPermissions();
+    return await this.permissionService.getPermissions();
   }
 
   @Post('role')
@@ -36,14 +40,15 @@ export class PermissionController {
 
   @Get('project/:projectId/roles')
   async getProjectAllRole(@Param('projectId') projectId: string) {
-    return await this.permissionService.getProjectAllRoles(projectId);
+    return await this.permissionService.getProjectRoles(projectId);
   }
 
   @Get('project/:projectId/user/:username/roles')
   async getProjectUserAllRole(
-    @Query('projectId') projectId: string,
-    @Query('username') username: string,
+    @Param('projectId') projectId: string,
+    @Param('username') username: string,
   ) {
+    console.log('projectId', projectId);
     return await this.permissionService.getProjectUserRoles(
       projectId,
       username,
@@ -52,12 +57,12 @@ export class PermissionController {
 
   @Get('project/:projectId/roles/permissions')
   async getProjectAllRolePermissions(@Query('projectId') projectId: string) {
-    return await this.permissionService.getProjectAllRolePermissions(projectId);
+    return await this.permissionService.getProjectRolesPermissions(projectId);
   }
 
   @Delete('project/:projectId/role/:name')
   async deleteRole(
-    @Query('projectId') projectId: string,
+    @Param('projectId') projectId: string,
     @Param('name') name: string,
   ) {
     await this.permissionService.deleteRole(projectId, name);
@@ -67,7 +72,7 @@ export class PermissionController {
   @ApiBody({ type: UpdateRoleDto })
   @UsePipes(new ValidationPipe())
   async updateRole(
-    @Query('projectId') projectId: string,
+    @Param('projectId') projectId: string,
     @Param('name') name: string,
     @Body() updateRoleDto: UpdateRoleDto,
   ) {
@@ -75,6 +80,21 @@ export class PermissionController {
       projectId,
       name,
       updateRoleDto.permissions,
+    );
+  }
+
+  @Post('project/:projectId/user/:username/roles')
+  @ApiBody({ type: AssignRoleDto })
+  @UsePipes(new ValidationPipe())
+  async assignUserRole(
+    @Param('projectId') projectId: string,
+    @Param('username') username: string,
+    @Body() roleNames: AssignRoleDto,
+  ) {
+    await this.permissionService.assignUserRole(
+      projectId,
+      username,
+      roleNames.roleNames,
     );
   }
 }

@@ -65,30 +65,28 @@ describe('PermissionController (e2e)', () => {
         queryProjectUserRoles: jest.fn().mockImplementation(async () => {
           return _.map(['DM', 'player'], (v) => ({ name: v }));
         }),
-        queryProjectAllRolePermissions: jest
-          .fn()
-          .mockImplementation(async () => {
-            return {
-              records: [
-                {
-                  get: (key: string) => {
-                    return {
-                      Role: 'DM',
-                      Permissions: ['read', 'write'],
-                    }[key];
-                  },
+        queryProjectRolesPermissions: jest.fn().mockImplementation(async () => {
+          return {
+            records: [
+              {
+                get: (key: string) => {
+                  return {
+                    Role: 'DM',
+                    Permissions: ['read', 'write'],
+                  }[key];
                 },
-                {
-                  get: (key: string) => {
-                    return {
-                      Role: 'PO',
-                      Permissions: ['read'],
-                    }[key];
-                  },
+              },
+              {
+                get: (key: string) => {
+                  return {
+                    Role: 'PO',
+                    Permissions: ['read'],
+                  }[key];
                 },
-              ],
-            };
-          }),
+              },
+            ],
+          };
+        }),
         checkPermissionExist: jest.fn().mockImplementation(async () => {
           return 2;
         }),

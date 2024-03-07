@@ -29,7 +29,7 @@ export class ProjectController {
 
   @Get(':username')
   async getUserProject(@Param('username') username: string) {
-    return await this.projectService.getUserProject(username);
+    return await this.projectService.getUserProjects(username);
   }
 
   @Delete(':projectId')

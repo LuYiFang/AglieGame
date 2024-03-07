@@ -12,11 +12,4 @@ import { ApiBody } from '@nestjs/swagger';
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
-
-  @Post('signup')
-  @ApiBody({ type: CreateUserDto })
-  @UsePipes(new ValidationPipe())
-  async signup(@Body() createUserDto: CreateUserDto) {
-    return await this.userService.createUser(createUserDto);
-  }
 }

@@ -46,7 +46,7 @@ describe('Project (e2e)', () => {
             return false;
           }),
         },
-        queryUserProject: jest.fn().mockImplementation(async () => {
+        queryUserProjects: jest.fn().mockImplementation(async () => {
           return [
             {
               uuid: 'fake_uuid',

@@ -12,12 +12,13 @@ export function HandleNeo4jResult(isMany: boolean = true) {
 
       const targetResult = [];
       _.each(result.records, (record) => {
-        console.log('record', record);
         const recordObject = record.get('u');
         if (!recordObject) return;
 
-        const recordProperties = recordObject.properties;
-        if (!recordProperties) return;
+        let recordProperties = recordObject.properties;
+        if (!recordProperties) {
+          recordProperties = recordObject;
+        }
 
         targetResult.push({ id: recordObject.elementId, ...recordProperties });
       });

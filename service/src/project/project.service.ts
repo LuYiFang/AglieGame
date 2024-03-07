@@ -1,11 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Neo4jService } from 'nest-neo4j/dist';
-import { Porperties } from './interfaces/project.interface';
 import { ConfigService } from '@nestjs/config';
 import { HandleNeo4jResult } from '../common/decorators/extract-neo4j-record.decorator';
 import {
   Neo4jExtractMany,
   Neo4jExtractSingle,
+  Porperties,
 } from '../common/interfaces/common.interface';
 import * as _ from 'lodash';
 import { UserService } from '../user/user.service';
@@ -18,32 +18,44 @@ export class ProjectService {
     private readonly userService: UserService,
   ) {}
 
-  async writeProject(username: string, properties: Porperties) {
+  async writeProject(properties: Porperties) {
+    const createProject = `
+      CALL apoc.create.node(["Project"], $properties)
+      YIELD node AS p
+      SET p.uuid = apoc.create.uuid(),
+          p.createdAt = datetime(),
+          p.updatedAt = datetime()
+    `;
+
+    const createDafaulRole = `
+      WITH p
+      CALL apoc.create.node(["Role"], {name: "admin"})
+      YIELD node AS r
+      CREATE (p)-[:HAS_ROLE]->(r)
+    `;
+
+    const assignUserDefaulRole = `
+      WITH p, r
+      MATCH (u:User {username: $username})
+      CREATE (u)-[:IS_ROLE]->(r)
+    `;
+
+    const assignRolePermissions = `
+      WITH p, r
+      UNWIND $permissions AS permission
+      MATCH (perm:Permission {name: permission})
+      WITH p, r, perm
+      CREATE (r)-[:HAS_PERMISSION]->(perm)
+    `;
+
     const idObj = await this.neo4jService.write(
-      `
-            MATCH (u:User {username: $username})
-            CALL apoc.create.node(["Project"], $properties)
-            YIELD node AS p
-            SET p.uuid = apoc.create.uuid(),
-                p.createdAt = datetime(),
-                p.updatedAt = datetime()
-            WITH u, p
-            CREATE (u)-[:CREATE_PROJECT]->(p)
-            WITH u, p
-            CALL apoc.create.node(["Role"], {name: "admin", projectId: p.uuid, uniqueId: p.uuid + "admin"})
-            YIELD node AS r
-            CREATE (p)-[:HAS_ROLE]->(r)
-            WITH u, p, r
-            CREATE (u)-[:IS_ROLE]->(r)
-            WITH u, p, r
-            UNWIND $permissions AS permission
-            MATCH (perm:Permission {name: permission})
-            WITH p, r, perm
-            CREATE (r)-[:HAS_PERMISSION]->(perm)
-            RETURN p.uuid as uuid
-              `,
+      createProject +
+        createDafaulRole +
+        assignUserDefaulRole +
+        assignRolePermissions +
+        `RETURN p.uuid as uuid`,
       {
-        username,
+        username: properties.createdBy,
         properties,
         permissions: this.configService.get('DEFAULT_PERMISSIONS').split(','),
       },
@@ -57,25 +69,27 @@ export class ProjectService {
       throw new BadRequestException('User not exist');
     }
 
-    const targetProperties = { name: name, ...properties };
-    return await this.writeProject(username, targetProperties);
+    const targetProperties = { createdBy: username, name: name, ...properties };
+    return await this.writeProject(targetProperties);
   }
 
   @HandleNeo4jResult()
-  async queryUserProject(username: string): Neo4jExtractMany {
+  async queryUserProjects(username: string): Neo4jExtractMany {
     return await this.neo4jService.read(
       `
-        MATCH (:User {username: $username})-[:CREATE_PROJECT]->(u:Project) 
-        RETURN (u)`,
+        MATCH (:User {username: $username})-[:IS_ROLE]->(:Role)<-[:HAS_ROLE]-(p:Project) 
+        RETURN p { .*,
+                  createdAt: apoc.date.format(p.createdAt.epochMillis, 'ms', 'yyyy-MM-dd HH:mm:ss'), 
+                  updatedAt: apoc.date.format(p.updatedAt.epochMillis, 'ms', 'yyyy-MM-dd HH:mm:ss')} AS u`,
       { username },
     );
   }
 
-  async getUserProject(username: string) {
-    return await this.queryUserProject(username);
+  async getUserProjects(username: string) {
+    return await this.queryUserProjects(username);
   }
 
-  @HandleNeo4jResult()
+  @HandleNeo4jResult(false)
   async queryProject(projectId: string): Neo4jExtractSingle {
     return await this.neo4jService.read(
       `
@@ -96,7 +110,7 @@ export class ProjectService {
   }
 
   async checkProjectExist(projectId: string): Promise<boolean> {
-    const data = await this.getProject(projectId);
+    const data = await this.getProject(projectId, ['id']);
     if (!data || _.keys(data).length <= 0) {
       return false;
     }
@@ -106,8 +120,12 @@ export class ProjectService {
   async deleteProject(projectId: string) {
     await this.neo4jService.write(
       `
-        MATCH (p:Project {uuid: $projectId })-[:HAS_ROLE]->(r:Role) 
-        DETACH DELETE p, r`,
+        MATCH (p:Project {uuid: $projectId})
+        OPTIONAL MATCH (p)-[:HAS_USERSTORY]->(u:UserStory)-[:HAS_FEATURE]->(f:Feature)
+        OPTIONAL MATCH (p)-[:HAS_ROLE]->(r:Role)
+        OPTIONAL MATCH (p)-[:HAS_SETTING]->(s:Setting)
+        DETACH DELETE p, u, f, r, s
+      `,
       { projectId },
     );
   }

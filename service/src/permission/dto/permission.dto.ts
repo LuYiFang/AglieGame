@@ -24,3 +24,11 @@ export class UpdateRoleDto {
   @IsString({ each: true })
   permissions: Array<string> = [];
 }
+
+export class AssignRoleDto {
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsArray()
+  @IsString({ each: true })
+  roleNames: Array<string> = [];
+}

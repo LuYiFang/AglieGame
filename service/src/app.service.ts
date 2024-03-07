@@ -25,7 +25,7 @@ export class AppService implements OnModuleInit {
 
   async initProject() {
     this.neo4jService.write(
-      'CREATE INDEX project_name_uuid_index IF NOT EXISTS FOR (r:Project) ON (r.name, r.uuid)',
+      'CREATE CONSTRAINT projectUuidUnique IF NOT EXISTS FOR (r:Project) REQUIRE r.uuid IS UNIQUE',
     );
   }
 
@@ -45,13 +45,8 @@ export class AppService implements OnModuleInit {
 
   async initRole() {
     try {
-      await this.neo4jService.write(
-        `
-        CREATE CONSTRAINT RoleUniqueIdUnique IF NOT EXISTS FOR (u:Role) REQUIRE u.uniqueId IS UNIQUE
-        `,
-      );
       this.neo4jService.write(
-        'CREATE INDEX role_name_projectId_index IF NOT EXISTS FOR (r:Role) ON (r.name, r.projectId)',
+        'CREATE INDEX roleNameIndex IF NOT EXISTS FOR (r:Role) ON (r.name)',
       );
     } catch (error) {
       throw new InternalServerErrorException('Error when init database', {
