@@ -17,10 +17,17 @@ import {
   CreateRoleDto,
   UpdateRoleDto,
 } from './dto/permission.dto';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+import { ProjectUserPermission } from 'src/common/interfaces/common.interface';
 
 @Controller('permission')
 export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}
+
+  @MessagePattern('checkProjectUserPermissions')
+  checkProjectUserPermissions(@Payload() data: ProjectUserPermission) {
+    return this.permissionService.checkProjectUserPermissions(data);
+  }
 
   @Get()
   async getAllPermission() {

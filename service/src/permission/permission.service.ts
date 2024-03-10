@@ -1,18 +1,22 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { Neo4jService } from 'nest-neo4j/dist';
 import { HandleNeo4jResult } from '../common/decorators/extract-neo4j-record.decorator';
 import * as _ from 'lodash';
 import {
   Neo4jExtractMany,
   Neo4jExtractSingle,
+  ProjectUserPermission,
 } from '../common/interfaces/common.interface';
 import { ProjectService } from '../project/project.service';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class PermissionService {
   constructor(
     private readonly neo4jService: Neo4jService,
     private readonly projectService: ProjectService,
+    @Inject('APP_SERVICE') private readonly client: ClientProxy,
   ) {}
 
   async createPermission(name: string) {
@@ -95,6 +99,37 @@ export class PermissionService {
     return targetData;
   }
 
+  @HandleNeo4jResult()
+  async queryProjectUserPermissions(
+    projectId: string,
+    username: string,
+    permissions: Array<string>,
+  ): Neo4jExtractMany {
+    return await this.neo4jService.read(
+      `
+      MATCH (:Project {uuid: $projectId})-[:HAS_ROLE]->(r:Role)
+      MATCH (:User {username: $username})-[:IS_ROLE]->(r)
+      MATCH (r)-[:HAS_PERMISSION]->(p:Permission)
+      WHERE p.name in $permissions
+      RETURN p AS u
+    `,
+      { projectId, username, permissions },
+    );
+  }
+
+  async checkProjectUserPermissions({
+    projectId,
+    username,
+    permissions,
+  }: ProjectUserPermission) {
+    const data = await this.queryProjectUserPermissions(
+      projectId,
+      username,
+      permissions,
+    );
+    return data.length === permissions.length;
+  }
+
   async checkPermissionExist(permissions: Array<string>) {
     const existPermissions = await this.neo4jService.read(
       `
@@ -130,7 +165,10 @@ export class PermissionService {
     name: string,
     permissions: Array<string>,
   ) {
-    if (!(await this.projectService.checkProjectExist(projectId))) {
+    const projectExists = await firstValueFrom(
+      this.client.send('checkProjectExist', projectId),
+    );
+    if (!projectExists) {
       throw new BadRequestException('Project not exists');
     }
 

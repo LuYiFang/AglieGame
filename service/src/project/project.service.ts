@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Neo4jService } from 'nest-neo4j/dist';
 import { ConfigService } from '@nestjs/config';
 import { HandleNeo4jResult } from '../common/decorators/extract-neo4j-record.decorator';
@@ -9,6 +14,9 @@ import {
 } from '../common/interfaces/common.interface';
 import * as _ from 'lodash';
 import { UserService } from '../user/user.service';
+import { noe4jDateReturn } from '../common/constants/common.constant';
+import { ClientProxy, Payload } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class ProjectService {
@@ -16,6 +24,7 @@ export class ProjectService {
     private readonly neo4jService: Neo4jService,
     private readonly configService: ConfigService,
     private readonly userService: UserService,
+    @Inject('APP_SERVICE') private readonly client: ClientProxy,
   ) {}
 
   async writeProject(properties: Porperties) {
@@ -24,7 +33,8 @@ export class ProjectService {
       YIELD node AS p
       SET p.uuid = apoc.create.uuid(),
           p.createdAt = datetime(),
-          p.updatedAt = datetime()
+          p.updatedAt = datetime(),
+          p.createdBy = $username
     `;
 
     const createDafaulRole = `
@@ -77,10 +87,10 @@ export class ProjectService {
   async queryUserProjects(username: string): Neo4jExtractMany {
     return await this.neo4jService.read(
       `
-        MATCH (:User {username: $username})-[:IS_ROLE]->(:Role)<-[:HAS_ROLE]-(p:Project) 
-        RETURN p { .*,
-                  createdAt: apoc.date.format(p.createdAt.epochMillis, 'ms', 'yyyy-MM-dd HH:mm:ss'), 
-                  updatedAt: apoc.date.format(p.updatedAt.epochMillis, 'ms', 'yyyy-MM-dd HH:mm:ss')} AS u`,
+        MATCH (:User {username: $username})-[:IS_ROLE]->(:Role)<-[:HAS_ROLE]-(d:Project) 
+        RETURN d { .*,
+                  ${noe4jDateReturn}
+                } AS u`,
       { username },
     );
   }
@@ -109,7 +119,8 @@ export class ProjectService {
     return _.pick(data, properties);
   }
 
-  async checkProjectExist(projectId: string): Promise<boolean> {
+  async checkProjectExist(@Payload() projectId: string): Promise<boolean> {
+    console.log('checkProjectExist', projectId);
     const data = await this.getProject(projectId, ['id']);
     if (!data || _.keys(data).length <= 0) {
       return false;
@@ -118,6 +129,33 @@ export class ProjectService {
   }
 
   async deleteProject(projectId: string) {
+    await this.neo4jService.write(
+      `
+        MATCH (p:Project {uuid: $projectId})
+        OPTIONAL MATCH (p)-[:HAS_USERSTORY]->(u:UserStory)-[:HAS_FEATURE]->(f:Feature)
+        OPTIONAL MATCH (p)-[:HAS_ROLE]->(r:Role)
+        OPTIONAL MATCH (p)-[:HAS_SETTING]->(s:Setting)
+        DETACH DELETE p, u, f, r, s
+      `,
+      { projectId },
+    );
+  }
+
+  async updateProject(projectId: string, username: string) {
+    const isExist = await this.checkProjectExist(projectId);
+    if (!isExist) {
+      throw new BadRequestException('Project does not exist');
+    }
+    const isValid = await firstValueFrom(
+      this.client.send('checkProjectUserPermissions', {
+        projectId,
+        username,
+        permissions: ['write'],
+      }),
+    );
+    if (!isValid) {
+      throw new UnauthorizedException('User does not have permission');
+    }
     await this.neo4jService.write(
       `
         MATCH (p:Project {uuid: $projectId})
