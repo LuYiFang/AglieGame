@@ -8,6 +8,9 @@ import { UserModule } from './user/user.module';
 import { EventModule } from './event/event.module';
 import { PermissionModule } from './permission/permission.module';
 import { ProjectModule } from './project/project.module';
+import { WorkItemModule } from './work-item/work-item.module';
+import { ProjectSettingsModule } from './project-settings/project-settings.module';
+import { CommonModule } from './common/common.module';
 
 @Module({
   imports: [
@@ -31,6 +34,9 @@ import { ProjectModule } from './project/project.module';
     EventModule,
     PermissionModule,
     ProjectModule,
+    WorkItemModule,
+    ProjectSettingsModule,
+    CommonModule,
   ],
   controllers: [AppController],
   providers: [AppService],

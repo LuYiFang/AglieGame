@@ -21,11 +21,18 @@ export class AppService implements OnModuleInit {
     await this.createInitPermissions();
     await this.initRole();
     this.initProject();
+    this.initUserStory();
   }
 
   async initProject() {
     this.neo4jService.write(
       'CREATE CONSTRAINT projectUuidUnique IF NOT EXISTS FOR (r:Project) REQUIRE r.uuid IS UNIQUE',
+    );
+  }
+
+  async initUserStory() {
+    this.neo4jService.write(
+      'CREATE CONSTRAINT userStoryUuidUnique IF NOT EXISTS FOR (r:UserStory) REQUIRE r.uuid IS UNIQUE',
     );
   }
 
