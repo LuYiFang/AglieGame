@@ -10,15 +10,17 @@ import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { ApiBody } from '@nestjs/swagger';
 import { LoginDto } from './dto/auth.dto';
-import { UserService } from '../user/user.service';
 import { Response } from 'express';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly userService: UserService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
+
+  @MessagePattern('validateToken')
+  validateToken(@Payload() token: string) {
+    return this.authService.validateToken(token);
+  }
 
   @Post('login')
   @ApiBody({ type: LoginDto })

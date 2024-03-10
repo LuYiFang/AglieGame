@@ -23,7 +23,6 @@ export class ProjectService {
   constructor(
     private readonly neo4jService: Neo4jService,
     private readonly configService: ConfigService,
-    private readonly userService: UserService,
     @Inject('APP_SERVICE') private readonly client: ClientProxy,
   ) {}
 
@@ -75,7 +74,7 @@ export class ProjectService {
   }
 
   async createProject(username: string, name: string, properties: Porperties) {
-    if (!(await this.userService.checkUserExist(username))) {
+    if (!(await firstValueFrom(this.client.send('checkUserExist', username)))) {
       throw new BadRequestException('User not exist');
     }
 
@@ -120,7 +119,6 @@ export class ProjectService {
   }
 
   async checkProjectExist(@Payload() projectId: string): Promise<boolean> {
-    console.log('checkProjectExist', projectId);
     const data = await this.getProject(projectId, ['id']);
     if (!data || _.keys(data).length <= 0) {
       return false;

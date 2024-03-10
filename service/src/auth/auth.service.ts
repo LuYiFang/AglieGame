@@ -1,32 +1,30 @@
 import {
   BadRequestException,
-  HttpException,
-  HttpStatus,
+  Inject,
   Injectable,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Neo4jService } from 'nest-neo4j';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
 import { LoginDto } from './dto/auth.dto';
-import { UserService } from '../user/user.service';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly neo4jService: Neo4jService,
     private readonly jwtService: JwtService,
-    private readonly userService: UserService,
+    @Inject('APP_SERVICE') private readonly client: ClientProxy,
   ) {}
 
   async validateUser(username: string, password: string): Promise<any> {
-    const user = await this.userService.findUser(username, [
-      'id',
-      'username',
-      'password',
-    ]);
+    const user = await firstValueFrom(
+      this.client.send('findUser', {
+        username,
+        properties: ['id', 'username', 'password'],
+      }),
+    );
 
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
@@ -57,12 +55,16 @@ export class AuthService {
   }
 
   async signup(loginDto: LoginDto) {
-    const userExist = await this.userService.checkUserExist(loginDto.username);
+    const userExist = await firstValueFrom(
+      this.client.send('checkUserExist', loginDto.username),
+    );
     if (userExist) {
       throw new BadRequestException('Username already exist.');
     }
 
-    const { username, id } = await this.userService.createUser(loginDto);
+    const { username, id } = await firstValueFrom(
+      this.client.send('createUser', loginDto),
+    );
     const jwt = this.createJWT(username, id);
     return jwt;
   }

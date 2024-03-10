@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -10,16 +11,15 @@ import {
   Neo4jExtractSingle,
   Porperties,
 } from '../../common/interfaces/common.interface';
-import { PermissionService } from '../../permission/permission.service';
-import { ProjectService } from '../../project/project.service';
 import { noe4jDateReturn } from '../../common/constants/common.constant';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class UserStoryService {
   constructor(
     private readonly neo4jService: Neo4jService,
-    private readonly permissionService: PermissionService,
-    private readonly projectService: ProjectService,
+    @Inject('APP_SERVICE') private readonly client: ClientProxy,
   ) {}
 
   @HandleNeo4jResult()
@@ -67,16 +67,20 @@ export class UserStoryService {
     username: string,
     properties: Porperties,
   ) {
-    const isExist = await this.projectService.checkProjectExist(projectId);
+    const isExist = await firstValueFrom(
+      this.client.send('checkProjectExist', projectId),
+    );
     if (!isExist) {
       throw new BadRequestException('Porject does not exist');
     }
 
-    const isValid = await this.permissionService.checkProjectUserPermissions({
-      projectId,
-      username,
-      permissions: ['create'],
-    });
+    const isValid = await firstValueFrom(
+      this.client.send('checkProjectUserPermissions', {
+        projectId,
+        username,
+        permissions: ['create'],
+      }),
+    );
     if (!isValid) {
       throw new UnauthorizedException('User does not have permission');
     }

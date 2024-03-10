@@ -7,7 +7,6 @@ import {
   Neo4jExtractSingle,
   ProjectUserPermission,
 } from '../common/interfaces/common.interface';
-import { ProjectService } from '../project/project.service';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
@@ -15,7 +14,6 @@ import { firstValueFrom } from 'rxjs';
 export class PermissionService {
   constructor(
     private readonly neo4jService: Neo4jService,
-    private readonly projectService: ProjectService,
     @Inject('APP_SERVICE') private readonly client: ClientProxy,
   ) {}
 
