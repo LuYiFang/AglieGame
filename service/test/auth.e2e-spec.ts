@@ -1,57 +1,49 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '../src/app.module';
 import * as request from 'supertest';
-import { Neo4jService } from 'nest-neo4j/dist';
-import { INestApplication } from '@nestjs/common';
-import { UserService } from '../src/user/user.service';
+import { INestApplication, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
 import * as _ from 'lodash';
+import { of } from 'rxjs';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
-  let neo4jService: Neo4jService;
-  let userService: UserService;
   let configService: ConfigService;
 
   beforeEach(async () => {
     configService = new ConfigService();
-    userService = new UserService(neo4jService, configService);
 
-    const userServiceMethods = _.reduce(
-      Object.getOwnPropertyNames(Object.getPrototypeOf(userService)),
-      (pre, method) => {
-        pre[method] = userService[method];
-        return pre;
-      },
-      {},
+    const password = await bcrypt.hash(
+      'testpassword',
+      parseInt(configService.get('BCRYPT_ROUND')),
     );
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-      .overrideProvider(UserService)
+      .overrideProvider('APP_SERVICE')
       .useValue({
-        ...userServiceMethods,
-        queryUser: jest
-          .fn()
-          .mockImplementation(async (username, properties) => {
-            if (username === 'testUser')
-              return {
+        send: jest.fn().mockImplementation((pattern, data) => {
+          switch (pattern) {
+            case 'findUser':
+              if (data.username === 'noUser') {
+                throw new NotFoundException('User not found.');
+              }
+              return of({
                 id: 'fake_id',
                 username: 'testUser',
-                password: await bcrypt.hash(
-                  'testpassword',
-                  parseInt(configService.get('BCRYPT_ROUND')),
-                ),
-              };
-            else {
-              return null;
-            }
-          }),
-        createUser: jest.fn().mockResolvedValue({
-          id: 'new_id',
-          username: 'newUser',
+                password: password,
+              });
+            case 'checkUserExist':
+              if (data === 'testUser') return of(true);
+              return of(false);
+            case 'createUser':
+              return of({
+                id: 'new_id',
+                username: 'newUser',
+              });
+          }
         }),
       })
       .compile();

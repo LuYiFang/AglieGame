@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -12,7 +13,13 @@ import {
 } from '@nestjs/common';
 import { ProjectService } from './project.service';
 import { ApiBody } from '@nestjs/swagger';
-import { CreateProjectDto } from './dto/project.dto';
+import {
+  CreateProjectDto,
+  UpdateProjectDto,
+  UpdatePropertyDto,
+  UpdatePropertyNameDto,
+  UpdatePropertyValueDto,
+} from './dto/project.dto';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
 @Controller('project')
@@ -45,11 +52,42 @@ export class ProjectController {
     return await this.projectService.deleteProject(projectId);
   }
 
-  @Put(':projectId')
-  async updateProject(
+  @Put(':projectId/propertyValue')
+  @ApiBody({ type: UpdatePropertyValueDto })
+  @UsePipes(new ValidationPipe())
+  async updateProperty(
     @Param('projectId') projectId: string,
-    @Query('username') username: string,
+    @Body() updatePropertyValueDto: UpdatePropertyValueDto,
   ) {
-    return await this.projectService.updateProject(projectId, username);
+    return await this.projectService.updateProjectProperty(
+      projectId,
+      updatePropertyValueDto,
+    );
+  }
+
+  @Patch(':projectId/propertyName')
+  @ApiBody({ type: UpdatePropertyNameDto })
+  @UsePipes(new ValidationPipe())
+  async updatePropertyName(
+    @Param('projectId') projectId: string,
+    @Body() updatePropertyNameDto: UpdatePropertyNameDto,
+  ) {
+    return await this.projectService.updateProjectPropertyName(
+      projectId,
+      updatePropertyNameDto,
+    );
+  }
+
+  @Delete(':projectId/property')
+  @ApiBody({ type: UpdatePropertyDto })
+  @UsePipes(new ValidationPipe())
+  async deleteProperty(
+    @Param('projectId') projectId: string,
+    @Body() updatePropertyDto: UpdatePropertyDto,
+  ) {
+    return await this.projectService.deleteProjectProperty(
+      projectId,
+      updatePropertyDto,
+    );
   }
 }

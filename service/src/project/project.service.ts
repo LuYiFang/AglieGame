@@ -17,6 +17,11 @@ import { UserService } from '../user/user.service';
 import { noe4jDateReturn } from '../common/constants/common.constant';
 import { ClientProxy, Payload } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import {
+  UpdatePropertyDto,
+  UpdatePropertyNameDto,
+  UpdatePropertyValueDto,
+} from './dto/project.dto';
 
 @Injectable()
 export class ProjectService {
@@ -119,7 +124,7 @@ export class ProjectService {
   }
 
   async checkProjectExist(@Payload() projectId: string): Promise<boolean> {
-    const data = await this.getProject(projectId, ['id']);
+    const data = await this.getProject(projectId, ['uuid']);
     if (!data || _.keys(data).length <= 0) {
       return false;
     }
@@ -139,7 +144,7 @@ export class ProjectService {
     );
   }
 
-  async updateProject(projectId: string, username: string) {
+  async preCheckProject(projectId: string, username: string) {
     const isExist = await this.checkProjectExist(projectId);
     if (!isExist) {
       throw new BadRequestException('Project does not exist');
@@ -154,15 +159,53 @@ export class ProjectService {
     if (!isValid) {
       throw new UnauthorizedException('User does not have permission');
     }
+  }
+
+  async updateProjectProperty(
+    projectId: string,
+    { username, propertyName, propertyValue }: UpdatePropertyValueDto,
+  ) {
+    await this.preCheckProject(projectId, username);
     await this.neo4jService.write(
       `
-        MATCH (p:Project {uuid: $projectId})
-        OPTIONAL MATCH (p)-[:HAS_USERSTORY]->(u:UserStory)-[:HAS_FEATURE]->(f:Feature)
-        OPTIONAL MATCH (p)-[:HAS_ROLE]->(r:Role)
-        OPTIONAL MATCH (p)-[:HAS_SETTING]->(s:Setting)
-        DETACH DELETE p, u, f, r, s
+      MATCH (p:Project {uuid: $projectId})
+      CALL apoc.create.setProperty(p, $propertyName, $propertyValue)
+      YIELD node
+      RETURN node
       `,
-      { projectId },
+      { projectId, propertyName, propertyValue },
+    );
+  }
+
+  async updateProjectPropertyName(
+    projectId: string,
+    { username, propertyName, newPropertyName }: UpdatePropertyNameDto,
+  ) {
+    await this.preCheckProject(projectId, username);
+    await this.neo4jService.write(
+      `
+      MATCH (p:Project {uuid: $projectId})
+      CALL apoc.refactor.rename.nodeProperty($propertyName, $newPropertyName, [p])
+      YIELD batches
+      RETURN batches
+      `,
+      { projectId, propertyName, newPropertyName },
+    );
+  }
+
+  async deleteProjectProperty(
+    projectId: string,
+    { username, propertyName }: UpdatePropertyDto,
+  ) {
+    await this.preCheckProject(projectId, username);
+    await this.neo4jService.write(
+      `
+      MATCH (p:Project {uuid: $projectId})
+      CALL apoc.create.removeProperties([p], [$propertyName])
+      YIELD node
+      RETURN node
+      `,
+      { projectId, propertyName },
     );
   }
 }

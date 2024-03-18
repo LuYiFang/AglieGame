@@ -4,10 +4,10 @@ import { AppModule } from '../src/app.module';
 import * as request from 'supertest';
 import { Neo4jService } from 'nest-neo4j/dist';
 import { ConfigService } from '@nestjs/config';
-import { ProjectService } from '../src/project/project.service';
-import { UserService } from '../src/user/user.service';
 import { PermissionService } from '../src/permission/permission.service';
 import * as _ from 'lodash';
+import { of } from 'rxjs';
+import { ClientProxy } from '@nestjs/microservices';
 
 const API_PREFIX = 'permission';
 
@@ -15,18 +15,12 @@ describe('PermissionController (e2e)', () => {
   let app: INestApplication;
   let neo4jService: Neo4jService;
   let configService: ConfigService;
-  let userService: UserService;
-  let projectService: ProjectService;
   let permissionService: PermissionService;
+  let client: ClientProxy;
 
   beforeEach(async () => {
     configService = new ConfigService();
-    projectService = new ProjectService(
-      neo4jService,
-      configService,
-      userService,
-    );
-    permissionService = new PermissionService(neo4jService, projectService);
+    permissionService = new PermissionService(neo4jService, client);
 
     const permissionServiceMethods: { [key: string]: any } = _.reduce(
       Object.getOwnPropertyNames(Object.getPrototypeOf(permissionService)),
@@ -43,10 +37,13 @@ describe('PermissionController (e2e)', () => {
       .overrideProvider(PermissionService)
       .useValue({
         ...permissionServiceMethods,
-        projectService: {
-          checkProjectExist: jest.fn().mockImplementation(async (projectId) => {
-            if (projectId == 'existProject') return true;
-            return false;
+        client: {
+          send: jest.fn().mockImplementation((pattern, data) => {
+            switch (pattern) {
+              case 'checkProjectExist':
+                if (data == 'existProject') return of(true);
+                return of(false);
+            }
           }),
         },
         queryPermissions: jest.fn().mockImplementation(async () => {

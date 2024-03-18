@@ -1,3 +1,4 @@
+import { ValidationOptions, registerDecorator } from 'class-validator';
 import * as _ from 'lodash';
 
 export function HandleNeo4jResult(isMany: boolean = true) {
@@ -28,5 +29,28 @@ export function HandleNeo4jResult(isMany: boolean = true) {
     };
 
     return descriptor;
+  };
+}
+
+export function ExcludePropertyValues(
+  values: Array<string>,
+  validationOptions?: ValidationOptions,
+) {
+  return function (object: Object, propertyName: string) {
+    registerDecorator({
+      name: 'excludePropertyValues',
+      target: object.constructor,
+      propertyName: propertyName,
+      constraints: [values],
+      options: validationOptions,
+      validator: {
+        validate(value, args) {
+          return !values.includes(value);
+        },
+        defaultMessage(args) {
+          return `The following values are not allowed for the ${args.property} property: ${values.join(', ')}`;
+        },
+      },
+    });
   };
 }

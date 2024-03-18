@@ -210,7 +210,6 @@ export class PermissionService {
           MERGE (r)-[:HAS_PERMISSION]->(p)
         }
         RETURN r
-        
           `,
       { projectId, name, permissions },
     );

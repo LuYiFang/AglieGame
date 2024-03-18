@@ -62,10 +62,10 @@ export class UserStoryService {
     );
   }
 
-  async createUserStory(
+  async preCheck(
     projectId: string,
     username: string,
-    properties: Porperties,
+    permissions: Array<string>,
   ) {
     const isExist = await firstValueFrom(
       this.client.send('checkProjectExist', projectId),
@@ -78,13 +78,45 @@ export class UserStoryService {
       this.client.send('checkProjectUserPermissions', {
         projectId,
         username,
-        permissions: ['create'],
+        permissions,
       }),
     );
     if (!isValid) {
       throw new UnauthorizedException('User does not have permission');
     }
+  }
+
+  async createUserStory(
+    projectId: string,
+    username: string,
+    properties: Porperties,
+  ) {
+    this.preCheck(projectId, username, ['create']);
 
     return await this.writeUserStory(projectId, username, properties);
+  }
+
+  async updateUserStory(
+    projectId: string,
+    username: string,
+    properties: Porperties,
+  ) {
+    this.preCheck(projectId, username, ['write']);
+
+    return await this.neo4jService.write(
+      `
+        CALL apoc.create.node(["UserStory"], $properties)
+        YIELD node AS us
+        SET us.uuid = apoc.create.uuid(),
+            us.createdAt = datetime(),
+            us.updatedAt = datetime(),
+            us.createdBy = $username
+        WITH us
+        MATCH (p:Project {uuid: $projectId})
+        CREATE (p)-[:HAS_USER_STORY]->(us)
+        RETURN us.uuid as u
+        `,
+      { projectId, username, properties },
+    );
   }
 }

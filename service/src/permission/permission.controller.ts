@@ -55,7 +55,6 @@ export class PermissionController {
     @Param('projectId') projectId: string,
     @Param('username') username: string,
   ) {
-    console.log('projectId', projectId);
     return await this.permissionService.getProjectUserRoles(
       projectId,
       username,
