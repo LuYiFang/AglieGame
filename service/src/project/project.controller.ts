@@ -12,7 +12,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ProjectService } from './project.service';
-import { ApiBody } from '@nestjs/swagger';
+import { ApiBody, ApiTags } from '@nestjs/swagger';
 import {
   CreateProjectDto,
   UpdateProjectDto,
@@ -22,6 +22,7 @@ import {
 } from './dto/project.dto';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
+@ApiTags('project')
 @Controller('project')
 export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}

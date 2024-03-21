@@ -12,6 +12,7 @@ import { WorkItemModule } from './work-item/work-item.module';
 import { ProjectSettingsModule } from './project-settings/project-settings.module';
 import { CommonModule } from './common/common.module';
 import { QueueModule } from './queue/queue.module';
+import { AbilityModule } from './user/ability/ability.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { QueueModule } from './queue/queue.module';
     ProjectSettingsModule,
     CommonModule,
     QueueModule,
+    AbilityModule,
   ],
   controllers: [AppController],
   providers: [AppService],

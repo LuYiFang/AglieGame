@@ -8,9 +8,10 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { UserStoryService } from './user-story.service';
-import { ApiBody } from '@nestjs/swagger';
+import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { CreateWorkItemDto } from '../dto/work-item.dto';
 
+@ApiTags('user-story')
 @Controller('user-story')
 export class UserStoryController {
   constructor(private readonly userStoryService: UserStoryService) {}

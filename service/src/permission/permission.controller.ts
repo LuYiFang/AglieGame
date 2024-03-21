@@ -11,7 +11,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { PermissionService } from './permission.service';
-import { ApiBody } from '@nestjs/swagger';
+import { ApiBody, ApiTags } from '@nestjs/swagger';
 import {
   AssignRoleDto,
   CreateRoleDto,
@@ -20,6 +20,7 @@ import {
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ProjectUserPermission } from 'src/common/interfaces/common.interface';
 
+@ApiTags('permission')
 @Controller('permission')
 export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}
