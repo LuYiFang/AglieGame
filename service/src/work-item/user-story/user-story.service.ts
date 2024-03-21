@@ -28,7 +28,7 @@ export class UserStoryService {
       `
           MATCH (:Project {uuid: $projectId})-[:HAS_USER_STORY]->(d:UserStory)
           RETURN d { .*,
-                    ${noe4jDateReturn}
+                    ${noe4jDateReturn()}
                   } AS u
           `,
       { projectId },

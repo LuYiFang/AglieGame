@@ -93,7 +93,7 @@ export class ProjectService {
       `
         MATCH (:User {username: $username})-[:IS_ROLE]->(:Role)<-[:HAS_ROLE]-(d:Project) 
         RETURN d { .*,
-                  ${noe4jDateReturn}
+                  ${noe4jDateReturn()}
                 } AS u`,
       { username },
     );
