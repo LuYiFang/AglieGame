@@ -56,7 +56,7 @@ export class ProjectController {
   @Put(':projectId/propertyValue')
   @ApiBody({ type: UpdatePropertyValueDto })
   @UsePipes(new ValidationPipe())
-  async updateProperty(
+  async updateProjectProperty(
     @Param('projectId') projectId: string,
     @Body() updatePropertyValueDto: UpdatePropertyValueDto,
   ) {

@@ -23,7 +23,7 @@ import { ApiBody, ApiTags } from '@nestjs/swagger';
 export class AbilityController {
   constructor(private readonly abilityService: AbilityService) {}
 
-  @Post()
+  @Post('type')
   @ApiBody({ type: CreateAbilityTypeDto })
   @UsePipes(new ValidationPipe())
   createAbilityType(@Body() createAbilityDto: CreateAbilityTypeDto) {

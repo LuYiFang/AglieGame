@@ -24,14 +24,39 @@ export class AbilityService {
   constructor(
     private readonly neo4jService: Neo4jService,
     private readonly userService: UserService,
-  ) {}
+  ) {
+    this.createIndex();
+  }
+
+  async createIndex() {
+    try {
+      _.each(NODE_TYPE, (ability) => {
+        this.neo4jService.write(
+          `CREATE INDEX ${ability.replace(/^(.)/, (match) => match.toLowerCase())}Index IF NOT EXISTS FOR (a:${ability}) ON (a.name)`,
+        );
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Error when init ability', {
+        cause: error,
+      });
+    }
+  }
 
   matchAbilityType =
     'MATCH (:User {username: $username})-[:HAS_ABILITY_TYPE]->(a:AbilityType {name: $abilityTypeName})';
   matchAbilitySubType =
     'MATCH (a)-[:HAS_SUB_TYPE]->(as:AbilitySubType {name: $abilitySubTypeName})';
   matchAbilityItem =
-    'MATCH (as)-[:HAS_ITEM]->(d:AbilityItem {name: $itemName})';
+    'MATCH (as)-[:HAS_ITEM]->(ai:AbilityItem {name: $itemName})';
+
+  createNode = (ability: string) => `
+    CALL apoc.create.node(["${ability}"], $properties)
+    YIELD node AS n
+    SET n.name = $name,
+        n.createdAt = datetime(),
+        n.updatedAt = datetime(),
+        n.createdBy = $username
+    WITH n`;
 
   @HandleNeo4jResult(false)
   async queryAbility(
@@ -116,15 +141,9 @@ export class AbilityService {
 
     await this.neo4jService.write(
       `
-        CALL apoc.create.node(["AbilityType"], $properties)
-        YIELD node AS a
-        SET a.name = $name,
-            a.createdAt = datetime(),
-            a.updatedAt = datetime(),
-            a.createdBy = $username
-        WITH a
+        ${this.createNode('AbilityType')}
         MATCH (u:User {username: $username}) 
-        CREATE (u)-[:HAS_ABILITY_TYPE]->(a)
+        CREATE (u)-[:HAS_ABILITY_TYPE]->(n)
       `,
       { username, name, properties },
     );
@@ -150,15 +169,9 @@ export class AbilityService {
 
     await this.neo4jService.write(
       `
-        CALL apoc.create.node(["AbilitySubType"], $properties)
-        YIELD node AS as
-        SET as.name = $name,
-            as.createdAt = datetime(),
-            as.updatedAt = datetime(),
-            as.createdBy = $username
-        WITH as
-        MATCH (:User {username: $username})-[:HAS_ABILITY_TYPE]->(a:AbilityType {name: $abilityTypeName})
-        CREATE (a)-[:HAS_SUB_TYPE]->(as)
+        ${this.createNode('AbilitySubType')}
+        ${this.matchAbilityType}
+        CREATE (a)-[:HAS_SUB_TYPE]->(n)
       `,
       { username, abilityTypeName, name, properties },
     );
@@ -202,16 +215,10 @@ export class AbilityService {
 
     await this.neo4jService.write(
       `
-        CALL apoc.create.node(["AbilityItem"], $properties)
-        YIELD node AS ai
-        SET ai.name = $name,
-            ai.createdAt = datetime(),
-            ai.updatedAt = datetime(),
-            ai.createdBy = $username
-        WITH ai
-        MATCH (:User {username: $username})-[:HAS_ABILITY_TYPE]->(a:AbilityType {name: $abilityTypeName})
-        MATCH (a)-[:HAS_SUB_TYPE]->(as:AbilitySubType {name: $abilitySubTypeName})
-        CREATE (as)-[:HAS_ITEM]->(ai)
+        ${this.createNode('AbilityItem')}
+        ${this.matchAbilityType}
+        ${this.matchAbilitySubType}
+        CREATE (as)-[:HAS_ITEM]->(n)
       `,
       { username, abilityTypeName, abilitySubTypeName, name, properties },
     );
