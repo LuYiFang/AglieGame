@@ -51,7 +51,7 @@ export class AuthService {
       username,
       password,
     );
-    return this.createJWT(validUsername, id);
+    const jwt = this.createJWT(validUsername, id);
   }
 
   async signup(loginDto: LoginDto) {
@@ -66,7 +66,6 @@ export class AuthService {
       this.client.send('createUser', loginDto),
     );
     const jwt = this.createJWT(username, id);
-    return jwt;
   }
 
   async logout() {

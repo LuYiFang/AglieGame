@@ -11,11 +11,12 @@ import {
 } from '@nestjs/common';
 import { AbilityService } from './ability.service';
 import {
+  AbilityDto,
   CreateAbilityItemDto,
   CreateAbilitySubTypeDto,
   CreateAbilityTypeDto,
+  UpdateAbilityDto,
 } from './dto/create-ability.dto';
-import { UpdateAbilityDto } from './dto/update-ability.dto';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('ability')
@@ -44,23 +45,77 @@ export class AbilityController {
     return this.abilityService.createAbilityItemType(createAbilityItemDto);
   }
 
-  @Get()
-  findAll() {
-    return this.abilityService.findAll();
+  @Patch('')
+  @ApiBody({ type: UpdateAbilityDto })
+  @UsePipes(new ValidationPipe())
+  updateAbility(@Body() updateAbilityDto: UpdateAbilityDto) {
+    return this.abilityService.updateAbility(updateAbilityDto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.abilityService.findOne(+id);
+  // @Patch('name')
+  // @ApiBody({ type: UpdateAbilityNameDto })
+  // @UsePipes(new ValidationPipe())
+  // update(@Body() updateAbilityNameDto: UpdateAbilityNameDto) {
+  //   return this.abilityService.updateAbilityName(updateAbilityNameDto);
+  // }
+
+  @Delete(
+    'property/:username/:abilityTypeName/:abilitySubTypeName/:itemName/:property',
+  )
+  deleteProperty(
+    @Param('username') username: string,
+    @Param('abilityTypeName') abilityTypeName: string,
+    @Param('abilitySubTypeName') abilitySubTypeName: string,
+    @Param('itemName') itemName: string,
+    @Param('property') property: string,
+  ) {
+    return this.abilityService.deleteProperty({
+      username,
+      abilityTypeName,
+      abilitySubTypeName,
+      itemName,
+      property,
+    });
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAbilityDto: UpdateAbilityDto) {
-    return this.abilityService.update(+id, updateAbilityDto);
+  @Get(':username/all')
+  findAll(@Param('username') username: string) {
+    return this.abilityService.findAllByUser(username);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.abilityService.remove(+id);
+  @Delete(':username/:abilityTypeName')
+  deleteType(
+    @Param('username') username: string,
+    @Param('abilityTypeName') abilityTypeName: string,
+  ) {
+    return this.abilityService.deleteAbility({ username, abilityTypeName });
+  }
+
+  @Delete(':username/:abilityTypeName/:abilitySubTypeName')
+  deleteSubType(
+    @Param('username') username: string,
+    @Param('abilityTypeName') abilityTypeName: string,
+    @Param('abilitySubTypeName') abilitySubTypeName: string,
+  ) {
+    return this.abilityService.deleteAbility({
+      username,
+      abilityTypeName,
+      abilitySubTypeName,
+    });
+  }
+
+  @Delete(':username/:abilityTypeName/:abilitySubTypeName/:itemName')
+  deleteItem(
+    @Param('username') username: string,
+    @Param('abilityTypeName') abilityTypeName: string,
+    @Param('abilitySubTypeName') abilitySubTypeName: string,
+    @Param('itemName') itemName: string,
+  ) {
+    return this.abilityService.deleteAbility({
+      username,
+      abilityTypeName,
+      abilitySubTypeName,
+      itemName,
+    });
   }
 }

@@ -12,6 +12,7 @@ import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { LoginDto } from './dto/auth.dto';
 import { Response } from 'express';
 import { MessagePattern, Payload } from '@nestjs/microservices';
+import { successReturn } from '../common/constants/common.constant';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -36,7 +37,7 @@ export class AuthController {
       loginDto.password,
     );
     res.cookie('token', jwt, { maxAge: 60 * 60 * 1000 });
-    return loginDto.username;
+    return successReturn;
   }
 
   @Post('signup')
@@ -47,12 +48,13 @@ export class AuthController {
   ) {
     const jwt = await this.authService.signup(loginDto);
     res.cookie('token', jwt, { maxAge: 60 * 60 * 1000 });
-    return loginDto.username;
+    return successReturn;
   }
 
   @Post('logout')
   async logout(@Res({ passthrough: true }) res: Response) {
     await this.authService.logout();
     res.clearCookie('token');
+    return successReturn;
   }
 }
