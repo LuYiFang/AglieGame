@@ -1,7 +1,9 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/user.dto';
 import * as bcrypt from 'bcrypt';
@@ -13,11 +15,29 @@ import { HandleNeo4jResult } from '../common/decorators/extract-neo4j-record.dec
 import { Neo4jExtractSingle } from 'src/common/interfaces/common.interface';
 
 @Injectable()
-export class UserService {
+export class UserService implements OnModuleInit {
   constructor(
     private readonly neo4jService: Neo4jService,
     private readonly configService: ConfigService,
   ) {}
+
+  async onModuleInit() {
+    await this.createUserUniqueConstraint();
+  }
+
+  async createUserUniqueConstraint() {
+    try {
+      await this.neo4jService.write(
+        `
+        CREATE CONSTRAINT userUsernameUnique IF NOT EXISTS FOR (u:User) REQUIRE u.username IS UNIQUE
+        `,
+      );
+    } catch (error) {
+      throw new InternalServerErrorException('Error when init database', {
+        cause: error,
+      });
+    }
+  }
 
   @HandleNeo4jResult(false)
   async queryUser(username: string): Neo4jExtractSingle {

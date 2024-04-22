@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Neo4jService } from 'nest-neo4j/dist';
@@ -24,12 +25,22 @@ import {
 } from './dto/project.dto';
 
 @Injectable()
-export class ProjectService {
+export class ProjectService implements OnModuleInit {
   constructor(
     private readonly neo4jService: Neo4jService,
     private readonly configService: ConfigService,
     @Inject('APP_SERVICE') private readonly client: ClientProxy,
   ) {}
+
+  async onModuleInit() {
+    this.initProject();
+  }
+
+  async initProject() {
+    this.neo4jService.write(
+      'CREATE CONSTRAINT projectUuidUnique IF NOT EXISTS FOR (r:Project) REQUIRE r.uuid IS UNIQUE',
+    );
+  }
 
   async writeProject(properties: Porperties) {
     const createProject = `

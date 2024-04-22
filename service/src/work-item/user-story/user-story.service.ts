@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Neo4jService } from 'nest-neo4j/dist';
@@ -16,11 +17,21 @@ import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
-export class UserStoryService {
+export class UserStoryService implements OnModuleInit {
   constructor(
     private readonly neo4jService: Neo4jService,
     @Inject('APP_SERVICE') private readonly client: ClientProxy,
   ) {}
+
+  async onModuleInit() {
+    this.initUserStory();
+  }
+
+  async initUserStory() {
+    this.neo4jService.write(
+      'CREATE CONSTRAINT userStoryUuidUnique IF NOT EXISTS FOR (r:UserStory) REQUIRE r.uuid IS UNIQUE',
+    );
+  }
 
   @HandleNeo4jResult()
   async queryProjectStories(projectId: string): Neo4jExtractMany {
