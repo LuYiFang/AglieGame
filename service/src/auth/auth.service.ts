@@ -58,6 +58,7 @@ export class AuthService {
     const userExist = await firstValueFrom(
       this.client.send('checkUserExist', loginDto.username),
     );
+
     if (userExist) {
       throw new BadRequestException('Username already exist.');
     }

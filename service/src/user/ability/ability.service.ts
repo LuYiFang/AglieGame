@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  OnModuleInit,
 } from '@nestjs/common';
 import {
   CreateAbilityItemDto,
@@ -31,12 +32,14 @@ const NODE_TYPE = ['AbilityType', 'AbilitySubType', 'AbilityItem'];
 const RELATIONSHIP_TYPE = ['HAS_ABILITY_TYPE', 'HAS_SUB_TYPE', 'HAS_ITEM'];
 
 @Injectable()
-export class AbilityService {
+export class AbilityService implements OnModuleInit {
   constructor(
     private readonly neo4jService: Neo4jService,
     private readonly userService: UserService,
-  ) {
-    this.createIndex();
+  ) {}
+
+  async onModuleInit() {
+    await this.createIndex();
   }
 
   async createIndex() {
@@ -62,8 +65,8 @@ export class AbilityService {
 
   matchALLType =
     'MATCH (:User {username: $username})-[:HAS_ABILITY_TYPE]->(a:AbilityType)';
-  matchALLSubType = 'MATCH (a)-[:HAS_SUB_TYPE]->(as:AbilitySubType)';
-  matchALLItem = 'MATCH (as)-[:HAS_ITEM]->(ai:AbilityItem)';
+  matchALLSubType = 'OPTIONAL MATCH (a)-[:HAS_SUB_TYPE]->(as:AbilitySubType)';
+  matchALLItem = 'OPTIONAL MATCH (as)-[:HAS_ITEM]->(ai:AbilityItem)';
 
   createNode = (ability: string) => `
     CALL apoc.create.node(["${ability}"], $properties)
@@ -288,7 +291,6 @@ export class AbilityService {
     }
 
     if (
-      itemName &&
       !(await this.checkAbilityExist(
         username,
         abilityTypeName,
@@ -440,13 +442,18 @@ export class AbilityService {
   @HandleNeo4jResult()
   async findAllByUser(username: string): Neo4jExtractMany {
     return await this.neo4jService.read(
-      `${this.matchALLType}
-      ${this.matchALLSubType}
-      ${this.matchALLItem}
-        WITH a, as, collect(ai) AS items
-        WITH a, collect({subType: as, items: items}) AS SubTypes
-        RETURN {AbilityType: a, SubTypes: SubTypes} AS u
-        `,
+      `
+          ${this.matchALLType}
+          ${this.matchALLSubType}
+          ${this.matchALLItem}
+          WITH a, as, ai
+          ORDER BY ai.name
+          WITH a, as, collect(ai) AS items
+          ORDER BY as.name
+          WITH a, collect({subType: as, items: items}) AS SubTypes
+          RETURN {abilityType: a, subTypes: SubTypes} AS u
+          ORDER BY a.name
+          `,
       { username },
     );
   }

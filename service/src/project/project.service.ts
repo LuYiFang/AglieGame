@@ -37,9 +37,11 @@ export class ProjectService implements OnModuleInit {
   }
 
   async initProject() {
-    this.neo4jService.write(
-      'CREATE CONSTRAINT projectUuidUnique IF NOT EXISTS FOR (r:Project) REQUIRE r.uuid IS UNIQUE',
-    );
+    this.neo4jService
+      .write(
+        'CREATE CONSTRAINT projectUuidUnique IF NOT EXISTS FOR (r:Project) REQUIRE r.uuid IS UNIQUE',
+      )
+      .catch((error) => console.log('Create project index error:', error));
   }
 
   async writeProject(properties: Porperties) {

@@ -28,9 +28,11 @@ export class UserStoryService implements OnModuleInit {
   }
 
   async initUserStory() {
-    this.neo4jService.write(
-      'CREATE CONSTRAINT userStoryUuidUnique IF NOT EXISTS FOR (r:UserStory) REQUIRE r.uuid IS UNIQUE',
-    );
+    this.neo4jService
+      .write(
+        'CREATE CONSTRAINT userStoryUuidUnique IF NOT EXISTS FOR (r:UserStory) REQUIRE r.uuid IS UNIQUE',
+      )
+      .catch((error) => console.log('initUserStory', error));
   }
 
   @HandleNeo4jResult()

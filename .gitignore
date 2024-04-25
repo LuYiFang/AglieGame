@@ -2,3 +2,5 @@
 UI*.png
 *.txt
 service/src/tmp.js
+service/.env.dev
+service/.env.e2etest

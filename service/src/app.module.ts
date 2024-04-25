@@ -17,7 +17,9 @@ import { AbilityModule } from './user/ability/ability.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: ['.env.development.local', '.env'],
+      envFilePath: [
+        process.env.NODE_ENV ? `.env.${process.env.NODE_ENV.trim()}` : '.env',
+      ],
       isGlobal: true,
     }),
     Neo4jModule.forRootAsync({

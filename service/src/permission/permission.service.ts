@@ -49,9 +49,10 @@ export class PermissionService implements OnModuleInit {
     const defaultPermissions = this.configService
       .get('DEFAULT_PERMISSIONS')
       .split(',');
-    defaultPermissions.forEach((perm) => {
-      this.createPermission(perm);
-    });
+
+    await Promise.all(
+      _.map(defaultPermissions, (perm) => this.createPermission(perm)),
+    );
   }
 
   async initRole() {
@@ -73,7 +74,9 @@ export class PermissionService implements OnModuleInit {
         { name: name },
       );
     } catch (error) {
-      throw new BadRequestException('Failed to create user', { cause: error });
+      throw new BadRequestException('Failed to create permission', {
+        cause: error,
+      });
     }
   }
 
