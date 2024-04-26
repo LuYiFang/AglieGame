@@ -36,7 +36,7 @@ export class ProjectController {
   @ApiBody({ type: CreateProjectDto })
   @UsePipes(new ValidationPipe())
   async createProject(@Body() createProjectDto: CreateProjectDto) {
-    await this.projectService.createProject(
+    return await this.projectService.createProject(
       createProjectDto.username,
       createProjectDto.name,
       createProjectDto.properties,

@@ -3,85 +3,20 @@ import { INestApplication } from '@nestjs/common';
 import { AppModule } from '../src/app.module';
 import * as request from 'supertest';
 import * as _ from 'lodash';
-import {
-  TestContainer,
-  StartedTestContainer,
-  StoppedTestContainer,
-  GenericContainer,
-  Wait,
-} from 'testcontainers';
-import { Neo4jContainer } from '@testcontainers/neo4j';
-import { CommonService } from '../src/common/common.service';
 import { abilities, abilityItems, abilitySubs } from './ability.data';
 import { users } from './user.data';
 import { Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
-
-import neo4j from 'neo4j-driver';
-import { assert } from 'console';
 import { successReturn } from '../src/common/constants/common.constant';
+import { setupContainers, teardownContainers } from './setup';
 
 const API_PREFIX = 'ability';
-let containerDB: StartedTestContainer;
-let containerRabbitMQ;
-
-const createDBContainer = async () => {
-  try {
-    containerDB = await new GenericContainer('neo4j')
-      .withExposedPorts({
-        container: 7687,
-        host: 27878,
-      })
-      .withExposedPorts({
-        container: 7474,
-        host: 27474,
-      })
-      .withWaitStrategy(Wait.forLogMessage('Started.'))
-      .withEnvironment({
-        NEO4J_AUTH: 'neo4j/testtest',
-        NEO4J_PLUGINS: '["apoc"]',
-        NEO4J_dbms_security_procedures_unrestricted: 'apoc.*',
-      })
-      .withStartupTimeout(120_000)
-      .withLogConsumer((stream) => {
-        stream.on('err', (line) => console.error(line));
-      })
-      .start();
-  } catch (error) {}
-};
-
-const createQueueContainer = async () => {
-  try {
-    containerRabbitMQ = await new GenericContainer('rabbitmq:management')
-      .withExposedPorts({
-        container: 5672,
-        host: 20487,
-      })
-      .withExposedPorts({
-        container: 15672,
-        host: 20478,
-      })
-      .withEnvironment({
-        RABBITMQ_DEFAULT_USER: 'test',
-        RABBITMQ_DEFAULT_PASS: 'test',
-      })
-      .start();
-  } catch (error) {
-    console.log('Create rabbitMQ container error:', error);
-  }
-};
 
 describe('Project (e2e)', () => {
   let app: INestApplication;
 
-  beforeAll(async () => {
-    await Promise.all([createDBContainer(), createQueueContainer()]);
-  }, 200 * 1000);
-
-  afterAll(async () => {
-    await containerDB.stop();
-    await containerRabbitMQ.stop();
-  });
+  beforeAll(setupContainers, 20 * 1000);
+  afterAll(teardownContainers);
 
   beforeEach(async () => {
     try {

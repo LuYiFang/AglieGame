@@ -97,7 +97,8 @@ export class ProjectService implements OnModuleInit {
     }
 
     const targetProperties = { createdBy: username, name: name, ...properties };
-    return await this.writeProject(targetProperties);
+    const projectId = await this.writeProject(targetProperties);
+    return { projectId: projectId };
   }
 
   @HandleNeo4jResult()

@@ -63,7 +63,7 @@ export class PermissionController {
   }
 
   @Get('project/:projectId/roles/permissions')
-  async getProjectAllRolePermissions(@Query('projectId') projectId: string) {
+  async getProjectAllRolePermissions(@Param('projectId') projectId: string) {
     return await this.permissionService.getProjectRolesPermissions(projectId);
   }
 

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -82,7 +83,11 @@ export class PermissionService implements OnModuleInit {
 
   @HandleNeo4jResult()
   async queryPermissions(): Neo4jExtractMany {
-    return await this.neo4jService.read(`MATCH (u:Permission) RETURN (u)`);
+    return await this.neo4jService.read(`
+      MATCH (u:Permission) 
+      RETURN (u)
+      ORDER BY u.name
+    `);
   }
 
   async getPermissions() {
@@ -101,7 +106,11 @@ export class PermissionService implements OnModuleInit {
   @HandleNeo4jResult()
   async queryRoles(projectId: string): Neo4jExtractMany {
     return await this.neo4jService.read(
-      `MATCH (:Project {uuid: $projectId})-[:HAS_ROLE]->(u:Role) RETURN (u)`,
+      `
+        MATCH (:Project {uuid: $projectId})-[:HAS_ROLE]->(u:Role)
+        RETURN (u)
+        ORDER BY u.name
+      `,
       { projectId },
     );
   }
@@ -118,7 +127,9 @@ export class PermissionService implements OnModuleInit {
   ): Neo4jExtractMany {
     return await this.neo4jService.read(
       `
-    MATCH (:User {username: $username})-[:IS_ROLE]->(u:Role)<-[:HAS_ROLE]-(:Project {uuid: $projectId}) RETURN (u)
+    MATCH (:User {username: $username})-[:IS_ROLE]->(u:Role)<-[:HAS_ROLE]-(:Project {uuid: $projectId}) 
+    RETURN (u)
+    ORDER BY u.name
     `,
       { username, projectId },
     );
@@ -135,6 +146,7 @@ export class PermissionService implements OnModuleInit {
       MATCH (:Project {uuid: $projectId})-[:HAS_ROLE]->(r:Role)
       MATCH (r)-[:HAS_PERMISSION]->(p:Permission)
       RETURN r.name AS Role, collect(p.name) AS Permissions
+      ORDER BY r.name, Permissions
     `,
       { projectId },
     );
@@ -199,12 +211,12 @@ export class PermissionService implements OnModuleInit {
       `
             CREATE (r:Role {name: $name}) 
             WITH r
+            MATCH (pr:Project {uuid: $projectId})
+            CREATE (pr)-[:HAS_ROLE]->(r)
+            WITH r
             MATCH (p:Permission) 
             WHERE p.name IN $permissions
             CREATE (r)-[:HAS_PERMISSION]->(p)
-            WITH r
-            MATCH (pr:Project {uuid: $projectId})
-            CREATE (pr)-[:HAS_ROLE]->(r)
         `,
       { projectId, name, permissions },
     );
@@ -240,9 +252,21 @@ export class PermissionService implements OnModuleInit {
     name: string,
     permissions: Array<string>,
   ) {
+    const projectExists = await firstValueFrom(
+      this.client.send('checkProjectExist', projectId),
+    );
+    if (!projectExists) {
+      throw new BadRequestException('Project not exists');
+    }
+
+    const role = await this.queryRole(projectId, name);
+    if (!role) {
+      throw new BadRequestException(`Role ${name} not exists`);
+    }
+
     await this.neo4jService.write(
       `
-        MATCH (:Project {uuid: $projectId})-[:HAS_ROLE]->(r:Role)
+        MATCH (:Project {uuid: $projectId})-[:HAS_ROLE]->(r:Role {name: $name})
         MATCH (r)-[rel:HAS_PERMISSION]->(p:Permission)
         WITH r, collect(p.name) AS oldPermissions, $permissions AS newPermissions
         CALL {
@@ -267,10 +291,39 @@ export class PermissionService implements OnModuleInit {
     );
   }
 
+  @HandleNeo4jResult(false)
+  async getRoleBeenUsed(projectId: string, name: string): Neo4jExtractSingle {
+    return await this.neo4jService.read(
+      `
+      MATCH (:Project {uuid: $projectId})-[:HAS_ROLE]->(r:Role {name: $name})
+      MATCH (us:User)-[:IS_ROLE]->(r)
+      RETURN COUNT(us) AS u
+  `,
+      { projectId, name },
+    );
+  }
+
   async deleteRole(projectId: string, name: string) {
+    const projectExists = await firstValueFrom(
+      this.client.send('checkProjectExist', projectId),
+    );
+    if (!projectExists) {
+      throw new BadRequestException('Project not exists');
+    }
+
+    const role = await this.queryRole(projectId, name);
+    if (!role) {
+      throw new BadRequestException(`Role ${name} not exists`);
+    }
+
+    const count = await this.getRoleBeenUsed(projectId, name);
+    if (count.low > 0) {
+      throw new ConflictException(`Role is still in use`);
+    }
+
     await this.neo4jService.write(
       `
-            MATCH (:Project {uuid: $projectId})-[:HAS_ROLE]->(r:Role)
+            MATCH (:Project {uuid: $projectId})-[:HAS_ROLE]->(r:Role {name: $name})
             MATCH (r)-[rel:HAS_PERMISSION]->(p:Permission)
             DETACH DELETE r
         `,
@@ -283,6 +336,26 @@ export class PermissionService implements OnModuleInit {
     username: string,
     roleNames: Array<string>,
   ) {
+    const projectExists = await firstValueFrom(
+      this.client.send('checkProjectExist', projectId),
+    );
+    if (!projectExists) {
+      throw new BadRequestException('Project not exists');
+    }
+
+    if (!(await firstValueFrom(this.client.send('checkUserExist', username)))) {
+      throw new BadRequestException('User not exist');
+    }
+
+    await Promise.all(
+      _.map(roleNames, async (name) => {
+        const role = await this.queryRole(projectId, name);
+        if (!role) {
+          throw new BadRequestException(`Role ${name} not exists`);
+        }
+      }),
+    );
+
     await this.neo4jService.write(
       `
             MATCH (u:User {username: $username})

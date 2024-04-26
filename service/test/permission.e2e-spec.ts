@@ -2,120 +2,105 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { AppModule } from '../src/app.module';
 import * as request from 'supertest';
-import { Neo4jService } from 'nest-neo4j/dist';
 import { ConfigService } from '@nestjs/config';
-import { PermissionService } from '../src/permission/permission.service';
 import * as _ from 'lodash';
-import { of } from 'rxjs';
-import { ClientProxy } from '@nestjs/microservices';
+import { Transport } from '@nestjs/microservices';
+import {
+  createDefaultUsers,
+  setupContainers,
+  teardownContainers,
+} from './setup';
 
 const API_PREFIX = 'permission';
 
 describe('PermissionController (e2e)', () => {
   let app: INestApplication;
-  let neo4jService: Neo4jService;
   let configService: ConfigService;
-  let permissionService: PermissionService;
-  let client: ClientProxy;
+  let existProjectId: string;
+  let anotherProjectId: string;
+
+  beforeAll(setupContainers, 20 * 1000);
+  afterAll(teardownContainers);
 
   beforeEach(async () => {
-    configService = new ConfigService();
-    permissionService = new PermissionService(neo4jService, client);
-
-    const permissionServiceMethods: { [key: string]: any } = _.reduce(
-      Object.getOwnPropertyNames(Object.getPrototypeOf(permissionService)),
-      (pre, method) => {
-        pre[method] = permissionService[method];
-        return pre;
-      },
-      {},
-    );
-
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    })
-      .overrideProvider(PermissionService)
-      .useValue({
-        ...permissionServiceMethods,
-        client: {
-          send: jest.fn().mockImplementation((pattern, data) => {
-            switch (pattern) {
-              case 'checkProjectExist':
-                if (data == 'existProject') return of(true);
-                return of(false);
-            }
-          }),
-        },
-        queryPermissions: jest.fn().mockImplementation(async () => {
-          return _.map(
-            configService.get('DEFAULT_PERMISSIONS').split(','),
-            (v) => ({ name: v }),
-          );
-        }),
-        queryRole: jest.fn().mockImplementation(async (projectId, name) => {
-          if (name === 'newRole') return undefined;
-          return { id: 'role_id' };
-        }),
-        queryRoles: jest.fn().mockImplementation(async () => {
-          return _.map(['DM', 'player', 'PO'], (v) => ({ name: v }));
-        }),
-        queryProjectUserRoles: jest.fn().mockImplementation(async () => {
-          return _.map(['DM', 'player'], (v) => ({ name: v }));
-        }),
-        queryProjectRolesPermissions: jest.fn().mockImplementation(async () => {
-          return {
-            records: [
-              {
-                get: (key: string) => {
-                  return {
-                    Role: 'DM',
-                    Permissions: ['read', 'write'],
-                  }[key];
-                },
-              },
-              {
-                get: (key: string) => {
-                  return {
-                    Role: 'PO',
-                    Permissions: ['read'],
-                  }[key];
-                },
-              },
-            ],
-          };
-        }),
-        checkPermissionExist: jest.fn().mockImplementation(async () => {
-          return 2;
-        }),
-        writeRole: jest.fn().mockImplementation(async () => {}),
-        createPermission: jest.fn().mockImplementation(async () => {}),
-      })
-      .compile();
+    }).compile();
 
     app = moduleFixture.createNestApplication();
+    configService = app.get(ConfigService);
+    app.connectMicroservice({
+      transport: Transport.RMQ,
+      options: {
+        urls: [configService.get('RABBITMQ_URL')],
+        queue: 'app_queue',
+        queueOptions: {
+          durable: false,
+        },
+      },
+    });
+
     await app.init();
+    await app.startAllMicroservices();
   });
 
-  it(`/${API_PREFIX} (GET)`, () => {
+  it(`Get all permissions`, () => {
     return request(app.getHttpServer())
       .get(`/${API_PREFIX}`)
       .expect(200)
-      .expect(configService.get('DEFAULT_PERMISSIONS').split(','));
+      .expect(_.sortBy(configService.get('DEFAULT_PERMISSIONS').split(',')));
   });
 
-  it(`/${API_PREFIX}/role (POST)`, () => {
-    return request(app.getHttpServer())
+  it(`Create role (POST)`, async () => {
+    await createDefaultUsers(app);
+
+    let res = await request(app.getHttpServer())
+      .post(`/project`)
+      .send({
+        username: 'Alice',
+        name: 'anotherProject',
+        properties: { prize: 1000, slogan: 'fun' },
+      })
+      .expect(201);
+    anotherProjectId = res.body.projectId;
+
+    res = await request(app.getHttpServer())
+      .post(`/project`)
+      .send({
+        username: 'Alice',
+        name: 'existProject',
+        properties: { prize: 1000, slogan: 'fun' },
+      })
+      .expect(201);
+
+    expect(res.body).toHaveProperty('projectId');
+    existProjectId = res.body.projectId;
+
+    await Promise.all(
+      _.map(['DM', 'player', 'NPC'], (role) => {
+        return request(app.getHttpServer())
+          .post(`/${API_PREFIX}/role`)
+          .send({
+            projectId: existProjectId,
+            name: role,
+            permissions: role === 'DM' ? ['read', 'write'] : ['read'],
+          })
+          .expect(201);
+      }),
+    );
+
+    await request(app.getHttpServer())
       .post(`/${API_PREFIX}/role`)
       .send({
-        projectId: 'existProject',
-        name: 'newRole',
-        permissions: ['read', 'write'],
+        projectId: anotherProjectId,
+        name: 'player',
+        permissions: ['read'],
       })
       .expect(201);
   });
 
-  it(`/${API_PREFIX}/role (POST) project not exist`, () => {
-    return request(app.getHttpServer())
+  it(`Create role project not exist`, async () => {
+    const res = await request(app.getHttpServer())
       .post(`/${API_PREFIX}/role`)
       .send({
         projectId: 'notExistProject',
@@ -123,56 +108,162 @@ describe('PermissionController (e2e)', () => {
         permissions: ['read', 'write'],
       })
       .expect(400);
+    expect(res.body).toHaveProperty('message', 'Project not exists');
   });
 
-  it(`/${API_PREFIX}/role (POST) role exist`, () => {
-    return request(app.getHttpServer())
+  it(`Create role role exist`, async () => {
+    const res = await request(app.getHttpServer())
       .post(`/${API_PREFIX}/role`)
       .send({
-        projectId: 'existProject',
+        projectId: existProjectId,
         name: 'DM',
         permissions: ['read', 'write'],
       })
       .expect(400);
+    expect(res.body).toHaveProperty('message', 'Role already exists');
   });
 
-  it(`/${API_PREFIX}/role (POST) permission not exist`, () => {
-    return request(app.getHttpServer())
+  it(`Create role permission not exist`, async () => {
+    const res = await request(app.getHttpServer())
       .post(`/${API_PREFIX}/role`)
       .send({
-        projectId: 'existProject',
-        name: 'testRole',
+        projectId: existProjectId,
+        name: 'PO',
         permissions: ['read', 'carry', 'create'],
       })
       .expect(400);
+    expect(res.body).toHaveProperty('message', 'Permission not exists');
   });
 
-  it(`/${API_PREFIX}/project/:projectId/roles (GET)`, () => {
-    return request(app.getHttpServer())
-      .get(`/${API_PREFIX}/project/existProject/roles`)
-      .expect(200)
-      .expect(['DM', 'player', 'PO']);
+  it(`Get project roles`, async () => {
+    const res = await request(app.getHttpServer())
+      .get(`/${API_PREFIX}/project/${existProjectId}/roles`)
+      .expect(200);
+    expect(res.body).toEqual(['DM', 'NPC', 'admin', 'player']);
   });
 
-  it(`/${API_PREFIX}/project/:projectId/user/:username/roles (GET)`, () => {
+  it(`Get project roles empty`, async () => {
+    const res = await request(app.getHttpServer())
+      .get(`/${API_PREFIX}/project/notExist/roles`)
+      .expect(200);
+    expect(res.body).toEqual([]);
+  });
+
+  it(`Assign user role`, async () => {
+    await request(app.getHttpServer())
+      .post(`/${API_PREFIX}/project/${existProjectId}/user/Cathy/roles`)
+      .send({
+        roleNames: ['DM', 'player'],
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/${API_PREFIX}/project/${existProjectId}/user/Bob/roles`)
+      .send({
+        roleNames: ['player'],
+      })
+      .expect(201);
+
+    const res = await request(app.getHttpServer())
+      .post(`/${API_PREFIX}/project/${anotherProjectId}/user/Bob/roles`)
+      .send({
+        roleNames: ['player'],
+      })
+      .expect(201);
+  });
+
+  it(`Assign user role user not exist`, async () => {
+    const res = await request(app.getHttpServer())
+      .post(`/${API_PREFIX}/project/${existProjectId}/user/noExist/roles`)
+      .send({
+        roleNames: ['DM', 'player'],
+      })
+      .expect(400);
+    expect(res.body).toHaveProperty('message', 'User not exist');
+  });
+
+  it(`Assign user role user not exist`, async () => {
+    const res = await request(app.getHttpServer())
+      .post(`/${API_PREFIX}/project/${existProjectId}/user/Cathy/roles`)
+      .send({
+        roleNames: ['DM', 'notExist'],
+      })
+      .expect(400);
+    expect(res.body).toHaveProperty('message', 'Role notExist not exists');
+  });
+
+  it(`Get project user roles`, () => {
     return request(app.getHttpServer())
-      .get(`/${API_PREFIX}/project/existProject/user/User1/roles`)
+      .get(`/${API_PREFIX}/project/${existProjectId}/user/Cathy/roles`)
       .expect(200)
       .expect(['DM', 'player']);
   });
 
-  it(`/${API_PREFIX}/project/:projectId/roles/permissions (GET)`, () => {
+  it(`Get project user roles empty`, () => {
     return request(app.getHttpServer())
-      .get(`/${API_PREFIX}/project/existProject/roles/permissions`)
+      .get(`/${API_PREFIX}/project/${existProjectId}/user/noExit/roles`)
       .expect(200)
-      .expect({ DM: ['read', 'write'], PO: ['read'] });
+      .expect([]);
   });
 
-  it(`/${API_PREFIX}/project/:projectId/role/:name (GET)`, () => {
+  it(`Update role permissions`, async () => {
+    await request(app.getHttpServer())
+      .put(`/${API_PREFIX}/project/${existProjectId}/role/DM`)
+      .send({
+        permissions: ['create', 'write'],
+      })
+      .expect(200);
+  });
+
+  it(`Update role permissions project not exist`, async () => {
+    const res = await request(app.getHttpServer())
+      .put(`/${API_PREFIX}/project/notEXist/role/DM`)
+      .send({
+        permissions: ['create', 'write'],
+      })
+      .expect(400);
+    expect(res.body).toHaveProperty('message', 'Project not exists');
+  });
+
+  it(`Update role permissions role not exist`, async () => {
+    const res = await request(app.getHttpServer())
+      .put(`/${API_PREFIX}/project/${existProjectId}/role/AAA`)
+      .send({
+        permissions: ['create', 'write'],
+      })
+      .expect(400);
+    expect(res.body).toHaveProperty('message', 'Role AAA not exists');
+  });
+
+  it(`Delete role`, async () => {
+    const res = await request(app.getHttpServer())
+      .delete(`/${API_PREFIX}/project/${existProjectId}/role/NPC`)
+      .expect(200);
+  });
+
+  it(`Delete role in use `, async () => {
+    const res = await request(app.getHttpServer())
+      .delete(`/${API_PREFIX}/project/${existProjectId}/role/player`)
+      .expect(409);
+    expect(res.body).toHaveProperty('message', 'Role is still in use');
+  });
+
+  it(`Get roles permissions`, () => {
     return request(app.getHttpServer())
-      .get(`/${API_PREFIX}/project/existProject/roles/permissions`)
+      .get(`/${API_PREFIX}/project/${existProjectId}/roles/permissions`)
       .expect(200)
-      .expect({ DM: ['read', 'write'], PO: ['read'] });
+      .expect({
+        DM: ['create', 'write'],
+        admin: ['administer', 'execute', 'delete', 'create', 'write', 'read'],
+        player: ['read'],
+      });
+  });
+
+  it(`Get roles permissions empty`, () => {
+    return request(app.getHttpServer())
+      .get(`/${API_PREFIX}/project/noExist/roles/permissions`)
+      .expect(200)
+      .expect({});
   });
 
   afterEach(async () => {
