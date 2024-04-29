@@ -2,156 +2,168 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { AppModule } from '../src/app.module';
 import * as request from 'supertest';
-import { Neo4jService } from 'nest-neo4j/dist';
 import { ConfigService } from '@nestjs/config';
-import { ProjectService } from '../src/project/project.service';
 import * as _ from 'lodash';
-import { of } from 'rxjs';
-import { ClientProxy } from '@nestjs/microservices';
+import { Transport } from '@nestjs/microservices';
+import {
+  createDefaultUsers,
+  setupContainers,
+  teardownContainers,
+} from './setup';
 
 const API_PREFIX = 'project';
 
 describe('Project (e2e)', () => {
   let app: INestApplication;
-  let neo4jService: Neo4jService;
   let configService: ConfigService;
-  let projectService: ProjectService;
-  let client: ClientProxy;
+  let existProjectId: string;
+
+  beforeAll(setupContainers, 20 * 1000);
+  afterAll(teardownContainers);
 
   beforeEach(async () => {
-    configService = new ConfigService();
-    projectService = new ProjectService(neo4jService, configService, client);
-
-    const projectServiceMethods: { [key: string]: any } = _.reduce(
-      Object.getOwnPropertyNames(Object.getPrototypeOf(projectService)),
-      (pre, method) => {
-        pre[method] = projectService[method];
-        return pre;
-      },
-      {},
-    );
-
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    })
-      .overrideProvider(ProjectService)
-      .useValue({
-        ...projectServiceMethods,
-        client: {
-          send: jest.fn().mockImplementation((pattern, data) => {
-            switch (pattern) {
-              case 'checkUserExist':
-                if (data === 'existUser') return of(true);
-                return of(false);
-              case 'checkProjectUserPermissions':
-                if (data.username !== 'invalid') return of(true);
-                return of(false);
-            }
-          }),
-        },
-        queryProject: jest.fn().mockImplementation(async (projectId) => {
-          if (projectId === 'notExist') return {};
-          return {
-            uuid: 'fake_uuid',
-          };
-        }),
-        queryUserProjects: jest.fn().mockImplementation(async () => {
-          return [
-            {
-              uuid: 'fake_uuid',
-              username: 'existUser',
-              name: 'newProject',
-            },
-          ];
-        }),
-        writeProject: jest.fn().mockImplementation(async () => {}),
-        neo4jService: {
-          write: jest.fn().mockImplementation(async () => {}),
-        },
-      })
-      .compile();
+    }).compile();
 
     app = moduleFixture.createNestApplication();
+    configService = app.get(ConfigService);
+    app.connectMicroservice({
+      transport: Transport.RMQ,
+      options: {
+        urls: [configService.get('RABBITMQ_URL')],
+        queue: 'app_queue',
+        queueOptions: {
+          durable: false,
+        },
+      },
+    });
     await app.init();
+    await app.startAllMicroservices();
   });
 
-  it(`/${API_PREFIX} (POST)`, () => {
-    return request(app.getHttpServer())
+  it(`Create project`, async () => {
+    await createDefaultUsers(app);
+
+    const res = await request(app.getHttpServer())
       .post(`/${API_PREFIX}`)
       .send({
-        username: 'existUser',
+        username: 'Alice',
         name: 'newProject',
         properties: { prize: 1000, slogan: 'fun' },
       })
       .expect(201);
+
+    expect(res.body).toHaveProperty('projectId');
+
+    existProjectId = res.body.projectId;
+
+    await request(app.getHttpServer())
+      .post(`/${API_PREFIX}`)
+      .send({
+        username: 'Alice',
+        name: 'antherProject',
+        properties: { prize: 2000, slogan: 'funny' },
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/permission/project/${existProjectId}/user/Bob/roles`)
+      .send({
+        roleNames: ['admin'],
+      })
+      .expect(201);
   });
 
-  it(`/${API_PREFIX}/:username (GET)`, () => {
+  it(`Get user projects`, async () => {
+    const res = await request(app.getHttpServer())
+      .get(`/${API_PREFIX}/user/Alice`)
+      .expect(200);
+
+    const data = res.body[0];
+    expect(data).toHaveProperty('slogan', 'funny');
+  });
+
+  it(`Update property value`, () => {
     return request(app.getHttpServer())
-      .get(`/${API_PREFIX}/:username`)
-      .expect(200)
-      .expect([
-        {
-          uuid: 'fake_uuid',
-          username: 'existUser',
-          name: 'newProject',
-        },
-      ]);
+      .patch(`/${API_PREFIX}/${existProjectId}/propertyValue`)
+      .send({
+        username: 'Alice',
+        propertyName: 'prize',
+        propertyValue: 5000,
+      })
+      .expect(200);
   });
 
-  _.each(
-    [
-      {
-        name: `/${API_PREFIX}/:projectId/propertyValue (PUT)`,
-        url: 'propertyValue',
-        method: 'put',
-      },
-      {
-        name: `/${API_PREFIX}/:projectId/propertyName (PATCH)`,
-        url: 'propertyName',
-        method: 'patch',
-      },
-      {
-        name: `/${API_PREFIX}/:projectId/property (DELETE)`,
-        url: 'property',
-        method: 'delete',
-      },
-    ],
-    (v) => {
-      it(`${v.name}`, () => {
-        return request(app.getHttpServer())
-          [v.method](`/${API_PREFIX}/fake_uuid/${v.url}`)
-          .send({
-            username: 'existUser',
-            propertyName: 'prize',
-            propertyValue: 2000,
-          })
-          .expect(200);
-      });
+  it(`Update property value not exist`, async () => {
+    const res = await request(app.getHttpServer())
+      .patch(`/${API_PREFIX}/notExist/propertyValue`)
+      .send({
+        username: 'Alice',
+        propertyName: 'prize',
+        propertyValue: 5000,
+      })
+      .expect(400);
 
-      it(`${v.name} project not exist`, () => {
-        return request(app.getHttpServer())
-          [v.method](`/${API_PREFIX}/notExist/${v.url}`)
-          .send({
-            username: 'existUser',
-            propertyName: 'prize',
-            propertyValue: 2000,
-          })
-          .expect(400);
-      });
+    expect(res.body).toHaveProperty('message', 'Project does not exist');
+  });
 
-      it(`${v.name} unauthorized`, () => {
-        return request(app.getHttpServer())
-          [v.method](`/${API_PREFIX}/fake_uuid/${v.url}`)
-          .send({
-            username: 'invalid',
-            propertyName: 'prize',
-            propertyValue: 2000,
-          })
-          .expect(401);
-      });
-    },
-  );
+  it(`Update property unauthorized`, async () => {
+    const res = await request(app.getHttpServer())
+      .patch(`/${API_PREFIX}/${existProjectId}/propertyValue`)
+      .send({
+        username: 'invalid',
+        propertyName: 'prize',
+        propertyValue: 5000,
+      })
+      .expect(401);
+
+    expect(res.body).toHaveProperty('message', 'User does not have permission');
+  });
+
+  it(`Update property name`, () => {
+    return request(app.getHttpServer())
+      .patch(`/${API_PREFIX}/${existProjectId}/name/propertyName`)
+      .send({
+        username: 'Alice',
+        propertyName: 'prize',
+        newPropertyName: '$$',
+      })
+      .expect(200);
+  });
+
+  it(`Delete property`, () => {
+    return request(app.getHttpServer())
+      .delete(`/${API_PREFIX}/${existProjectId}/property`)
+      .send({
+        username: 'Alice',
+        propertyName: 'slogan',
+      })
+      .expect(200);
+  });
+
+  it(`Get projects update value`, async () => {
+    const res = await request(app.getHttpServer())
+      .get(`/${API_PREFIX}/${existProjectId}`)
+      .expect(200);
+
+    const data = res.body;
+    expect(data).toHaveProperty('$$', 5000);
+    expect(data).not.toHaveProperty('slogan');
+  });
+
+  it(`Delete property`, () => {
+    return request(app.getHttpServer())
+      .delete(`/${API_PREFIX}/${existProjectId}`)
+      .expect(200);
+  });
+
+  it(`Get projects deleted`, async () => {
+    await request(app.getHttpServer())
+      .get(`/${API_PREFIX}/${existProjectId}`)
+      .expect(200)
+      .expect({});
+  });
 
   afterEach(async () => {
     await app.close();

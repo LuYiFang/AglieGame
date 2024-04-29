@@ -122,18 +122,22 @@ export class ProjectService implements OnModuleInit {
     return await this.neo4jService.read(
       `
         MATCH (u:Project {uuid: $projectId}) 
-        RETURN (u)`,
+        RETURN { 
+          elementId: elementId(u), 
+          properties: u {.*, ${noe4jDateReturn('u')}}
+        } AS u`,
       { projectId },
     );
   }
 
   async getProject(
     projectId: string,
-    properties: Array<string> = ['name'],
+    properties: Array<string> | 'all' = ['name'],
   ): Promise<{ [key: string]: any } | null> {
     const data = await this.queryProject(projectId);
     if (!data) return null;
 
+    if (properties === 'all') return data;
     return _.pick(data, properties);
   }
 

@@ -43,9 +43,14 @@ export class ProjectController {
     );
   }
 
-  @Get(':username')
+  @Get('user/:username')
   async getUserProject(@Param('username') username: string) {
     return await this.projectService.getUserProjects(username);
+  }
+
+  @Get(':projectId')
+  async getProject(@Param('projectId') projectId: string) {
+    return await this.projectService.getProject(projectId, 'all');
   }
 
   @Delete(':projectId')
@@ -53,7 +58,7 @@ export class ProjectController {
     return await this.projectService.deleteProject(projectId);
   }
 
-  @Put(':projectId/propertyValue')
+  @Patch(':projectId/propertyValue')
   @ApiBody({ type: UpdatePropertyValueDto })
   @UsePipes(new ValidationPipe())
   async updateProjectProperty(
@@ -66,7 +71,7 @@ export class ProjectController {
     );
   }
 
-  @Patch(':projectId/propertyName')
+  @Patch(':projectId/name/propertyName')
   @ApiBody({ type: UpdatePropertyNameDto })
   @UsePipes(new ValidationPipe())
   async updatePropertyName(
