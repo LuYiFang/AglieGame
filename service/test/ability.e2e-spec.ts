@@ -1,47 +1,32 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { AppModule } from '../src/app.module';
 import * as request from 'supertest';
 import * as _ from 'lodash';
 import { abilities, abilityItems, abilitySubs } from './ability.data';
 import { users } from './user.data';
-import { Transport } from '@nestjs/microservices';
-import { ConfigService } from '@nestjs/config';
 import { successReturn } from '../src/common/constants/common.constant';
-import { setupContainers, teardownContainers } from './setup';
+import { setupContainers, startApp, teardownContainers } from './setup';
 
 const API_PREFIX = 'ability';
+const NEO_PORT = 27878;
+const RABBIT_PORT = 20487;
 
 describe('Project (e2e)', () => {
   let app: INestApplication;
 
-  beforeAll(setupContainers, 20 * 1000);
-  afterAll(teardownContainers);
+  beforeAll(
+    async () => await setupContainers(NEO_PORT, RABBIT_PORT),
+    20 * 1000,
+  );
+  afterAll(teardownContainers, 20 * 1000);
 
   beforeEach(async () => {
-    try {
-      const moduleFixture: TestingModule = await Test.createTestingModule({
-        imports: [AppModule],
-      }).compile();
+    const result = await startApp(NEO_PORT, RABBIT_PORT);
+    app = result.app;
+  });
 
-      app = moduleFixture.createNestApplication();
-      const configService = app.get(ConfigService);
-      app.connectMicroservice({
-        transport: Transport.RMQ,
-        options: {
-          urls: [configService.get('RABBITMQ_URL')],
-          queue: 'app_queue',
-          queueOptions: {
-            durable: false,
-          },
-        },
-      });
-      await app.init();
-      await app.startAllMicroservices();
-    } catch (error) {
-      console.log('Create app error:', error);
-    }
-  }, 50 * 1000);
+  afterEach(async () => {
+    await app.close();
+  });
 
   it(
     `Create ability type`,
@@ -281,9 +266,5 @@ describe('Project (e2e)', () => {
         abilityTypeName: 'equipment1',
       });
     expect(res.status).toEqual(400);
-  });
-
-  afterEach(async () => {
-    await app.close();
   });
 });

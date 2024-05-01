@@ -63,7 +63,7 @@ export class UserService implements OnModuleInit {
   ): Promise<Record<string, any>> {
     const user = await this.getUser(username, properties);
     if (!user) {
-      throw new NotFoundException('User not found.');
+      return null;
     }
     return user;
   }

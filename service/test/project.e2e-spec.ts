@@ -1,45 +1,36 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { AppModule } from '../src/app.module';
 import * as request from 'supertest';
 import { ConfigService } from '@nestjs/config';
 import * as _ from 'lodash';
-import { Transport } from '@nestjs/microservices';
 import {
   createDefaultUsers,
   setupContainers,
+  startApp,
   teardownContainers,
 } from './setup';
 
 const API_PREFIX = 'project';
+const NEO_PORT = 27876;
+const RABBIT_PORT = 20486;
 
 describe('Project (e2e)', () => {
   let app: INestApplication;
   let configService: ConfigService;
   let existProjectId: string;
 
-  beforeAll(setupContainers, 20 * 1000);
-  afterAll(teardownContainers);
+  beforeAll(
+    async () => await setupContainers(NEO_PORT, RABBIT_PORT),
+    20 * 1000,
+  );
+  afterAll(teardownContainers, 20 * 1000);
 
   beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+    const result = await startApp(NEO_PORT, RABBIT_PORT);
+    app = result.app;
+  });
 
-    app = moduleFixture.createNestApplication();
-    configService = app.get(ConfigService);
-    app.connectMicroservice({
-      transport: Transport.RMQ,
-      options: {
-        urls: [configService.get('RABBITMQ_URL')],
-        queue: 'app_queue',
-        queueOptions: {
-          durable: false,
-        },
-      },
-    });
-    await app.init();
-    await app.startAllMicroservices();
+  afterEach(async () => {
+    await app.close();
   });
 
   it(`Create project`, async () => {
@@ -163,9 +154,5 @@ describe('Project (e2e)', () => {
       .get(`/${API_PREFIX}/${existProjectId}`)
       .expect(200)
       .expect({});
-  });
-
-  afterEach(async () => {
-    await app.close();
   });
 });

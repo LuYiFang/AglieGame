@@ -3,20 +3,21 @@ import * as request from 'supertest';
 import * as _ from 'lodash';
 import { StartedTestContainer, GenericContainer, Wait } from 'testcontainers';
 import { users } from './user.data';
+import { CommonService } from '../src/common/common.service';
+import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
+import { AppModule } from '../src/app.module';
+import { Transport } from '@nestjs/microservices';
 
 let containerDB: StartedTestContainer;
 let containerRabbitMQ: StartedTestContainer;
 
-const createDBContainer = async () => {
+const createDBContainer = async (port: number) => {
   try {
     containerDB = await new GenericContainer('neo4j')
       .withExposedPorts({
         container: 7687,
-        host: 27878,
-      })
-      .withExposedPorts({
-        container: 7474,
-        host: 27474,
+        host: port,
       })
       .withWaitStrategy(Wait.forLogMessage('Started.'))
       .withEnvironment({
@@ -34,16 +35,12 @@ const createDBContainer = async () => {
   }
 };
 
-const createQueueContainer = async () => {
+const createQueueContainer = async (port: number) => {
   try {
     containerRabbitMQ = await new GenericContainer('rabbitmq:management')
       .withExposedPorts({
         container: 5672,
-        host: 20487,
-      })
-      .withExposedPorts({
-        container: 15672,
-        host: 20478,
+        host: port,
       })
       .withEnvironment({
         RABBITMQ_DEFAULT_USER: 'test',
@@ -58,13 +55,62 @@ const createQueueContainer = async () => {
   }
 };
 
-export const setupContainers = async () => {
-  await Promise.all([createDBContainer(), createQueueContainer()]);
+export const setupContainers = async (dbPort: number, queuePort: number) => {
+  await Promise.all([
+    createDBContainer(dbPort),
+    createQueueContainer(queuePort),
+  ]);
 };
 
 export const teardownContainers = async () => {
   await containerDB.stop();
   await containerRabbitMQ.stop();
+  await CommonService.sleep(10 * 1000);
+};
+
+export const mockConfigService = (
+  configService: ConfigService,
+  neoPort: number,
+  rabbitPort: number,
+) => {
+  return {
+    get: jest.fn().mockImplementation((key: string) => {
+      if (key === 'NEO4J_PORT') {
+        return neoPort;
+      }
+      if (key === 'RABBITMQ_URL') {
+        return `amqp://test:test@127.0.0.1:${rabbitPort}`;
+      }
+      return configService.get(key);
+    }),
+  };
+};
+
+export const startApp = async (neoPort: number, rabbitPort: number) => {
+  const cs = new ConfigService();
+
+  const moduleFixture: TestingModule = await Test.createTestingModule({
+    imports: [AppModule],
+  })
+    .overrideProvider(ConfigService)
+    .useValue(mockConfigService(cs, neoPort, rabbitPort))
+    .compile();
+
+  const app = moduleFixture.createNestApplication();
+  const configService = app.get(ConfigService);
+  app.connectMicroservice({
+    transport: Transport.RMQ,
+    options: {
+      urls: [configService.get('RABBITMQ_URL')],
+      queue: 'app_queue',
+      queueOptions: {
+        durable: false,
+      },
+    },
+  });
+  await app.init();
+  await app.startAllMicroservices();
+  return { app, configService };
 };
 
 export const createDefaultUsers = async (app: INestApplication) => {

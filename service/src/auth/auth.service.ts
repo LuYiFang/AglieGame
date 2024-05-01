@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
@@ -9,7 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
 import { LoginDto } from './dto/auth.dto';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
+import { NotFoundError, firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +26,9 @@ export class AuthService {
         properties: ['id', 'username', 'password'],
       }),
     );
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
 
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
@@ -52,6 +56,7 @@ export class AuthService {
       password,
     );
     const jwt = this.createJWT(validUsername, id);
+    return jwt;
   }
 
   async signup(loginDto: LoginDto) {
@@ -67,6 +72,7 @@ export class AuthService {
       this.client.send('createUser', loginDto),
     );
     const jwt = this.createJWT(username, id);
+    return jwt;
   }
 
   async logout() {

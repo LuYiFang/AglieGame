@@ -17,8 +17,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "set NODE_ENV=e2etest && jest --config ./test/jest-e2e.json",
-    "test:e2eSingle": "set NODE_ENV=e2etest && jest --config ./test/jest-e2e.json ./test/ability.e2e-spec.ts"
+    "test:e2e": "set NODE_ENV=e2etest && jest --config ./test/jest-e2e.json && jest --config ./test/jest-e2e2.json",
+    "test:e2eSingle": "set NODE_ENV=e2etest && jest --config ./test/jest-e2e.json ./test/auth.e2e-spec.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
