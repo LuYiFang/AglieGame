@@ -1,26 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Porperties } from '../../../common/interfaces/common.interface';
+import { Properties } from '../../../common/interfaces/common.interface';
 import { IsObject, IsOptional, IsString } from 'class-validator';
 
 export class CreateAbilityTypeDto {
-  @ApiProperty()
-  @IsString()
-  username: string;
-
   @ApiProperty()
   @IsString()
   name: string;
 
   @ApiProperty()
   @IsObject()
-  properties: Porperties;
+  properties: Properties;
 }
 
 export class CreateAbilitySubTypeDto {
-  @ApiProperty()
-  @IsString()
-  username: string;
-
   @ApiProperty()
   @IsString()
   abilityTypeName: string;
@@ -31,14 +23,10 @@ export class CreateAbilitySubTypeDto {
 
   @ApiProperty()
   @IsObject()
-  properties: Porperties;
+  properties: Properties;
 }
 
 export class CreateAbilityItemDto {
-  @ApiProperty()
-  @IsString()
-  username: string;
-
   @ApiProperty()
   @IsString()
   abilityTypeName: string;
@@ -53,14 +41,10 @@ export class CreateAbilityItemDto {
 
   @ApiProperty()
   @IsObject()
-  properties: Porperties;
+  properties: Properties;
 }
 
 export class AbilityDto {
-  @ApiProperty()
-  @IsString()
-  username: string;
-
   @ApiPropertyOptional()
   @IsOptional()
   abilityTypeName?: string;
@@ -75,14 +59,6 @@ export class AbilityDto {
 }
 
 export class UpdateAbilityDto {
-  @ApiProperty()
-  @IsString()
-  username: string;
-
-  // @ApiProperty()
-  // @IsString()
-  // name: string;
-
   @ApiProperty()
   @IsString()
   propertyName: string;
@@ -106,10 +82,6 @@ export class UpdateAbilityDto {
 export class DeleteAbilityPropertyDto {
   @ApiProperty()
   @IsString()
-  username: string;
-
-  @ApiProperty()
-  @IsString()
   property: string;
 
   @ApiPropertyOptional()
@@ -124,29 +96,3 @@ export class DeleteAbilityPropertyDto {
   @IsOptional()
   itemName: string;
 }
-
-// export class UpdateAbilityNameDto {
-//   @ApiProperty()
-//   @IsString()
-//   username: string;
-
-//   @ApiProperty()
-//   @IsString()
-//   name: string;
-
-//   @ApiProperty()
-//   @IsString()
-//   newName: string;
-
-//   @ApiPropertyOptional()
-//   @IsOptional()
-//   abilityTypeName: string;
-
-//   @ApiPropertyOptional()
-//   @IsOptional()
-//   abilitySubTypeName: string;
-
-//   @ApiPropertyOptional()
-//   @IsOptional()
-//   itemName: string;
-// }

@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '../src/app.module';
 import { Transport } from '@nestjs/microservices';
+import * as cookieParser from 'cookie-parser';
 
 let containerDB: StartedTestContainer;
 let containerRabbitMQ: StartedTestContainer;
@@ -97,6 +98,7 @@ export const startApp = async (neoPort: number, rabbitPort: number) => {
     .compile();
 
   const app = moduleFixture.createNestApplication();
+  app.use(cookieParser());
   const configService = app.get(ConfigService);
   app.connectMicroservice({
     transport: Transport.RMQ,
@@ -128,4 +130,17 @@ export const createDefaultUsers = async (app: INestApplication) => {
         });
     }),
   );
+};
+
+export const login = async (app: INestApplication, username: string) => {
+  const res = await request(app.getHttpServer()).post('/auth/login').send({
+    username: username,
+    password: 'password',
+  });
+
+  const jwtCookie = _.find(res.header['set-cookie'], (cookie) =>
+    cookie.startsWith('token='),
+  );
+  const token = jwtCookie.split(';')[0]; //.replace('token=', '')
+  return token;
 };

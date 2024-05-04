@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsArray, IsObject, IsNotEmpty } from 'class-validator';
-import { Porperties } from '../../common/interfaces/common.interface';
+import { Properties } from '../../common/interfaces/common.interface';
 import { ExcludePropertyValues } from '../../common/decorators/extract-neo4j-record.decorator';
 
 export class CreateProjectDto {
@@ -16,15 +16,10 @@ export class CreateProjectDto {
 
   @ApiProperty()
   @IsObject()
-  properties: Porperties = {};
+  properties: Properties = {};
 }
 
 export class UpdatePropertyDto {
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  username: string = '';
-
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
@@ -48,11 +43,6 @@ export class UpdatePropertyNameDto extends UpdatePropertyDto {
 
 export class UpdateProjectDto {
   @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  username: string = '';
-
-  @ApiProperty()
   @IsObject()
-  properties: Porperties = {};
+  properties: Properties = {};
 }

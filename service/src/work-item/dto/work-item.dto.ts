@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsArray, IsObject } from 'class-validator';
-import { Porperties } from '../../common/interfaces/common.interface';
+import { Properties } from '../../common/interfaces/common.interface';
 
 export class CreateWorkItemDto {
   @ApiProperty()
@@ -13,5 +13,5 @@ export class CreateWorkItemDto {
 
   @ApiProperty()
   @IsObject()
-  properties: Porperties = {};
+  properties: Properties = {};
 }

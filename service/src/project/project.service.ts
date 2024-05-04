@@ -11,7 +11,7 @@ import { HandleNeo4jResult } from '../common/decorators/extract-neo4j-record.dec
 import {
   Neo4jExtractMany,
   Neo4jExtractSingle,
-  Porperties,
+  Properties,
 } from '../common/interfaces/common.interface';
 import * as _ from 'lodash';
 import { UserService } from '../user/user.service';
@@ -44,7 +44,7 @@ export class ProjectService implements OnModuleInit {
       .catch((error) => console.log('Create project index error:', error));
   }
 
-  async writeProject(properties: Porperties) {
+  async writeProject(properties: Properties) {
     const createProject = `
       CALL apoc.create.node(["Project"], $properties)
       YIELD node AS p
@@ -91,7 +91,7 @@ export class ProjectService implements OnModuleInit {
     return idObj.records[0].get('uuid');
   }
 
-  async createProject(username: string, name: string, properties: Porperties) {
+  async createProject(username: string, name: string, properties: Properties) {
     if (!(await firstValueFrom(this.client.send('checkUserExist', username)))) {
       throw new BadRequestException('User not exist');
     }
@@ -162,28 +162,10 @@ export class ProjectService implements OnModuleInit {
     );
   }
 
-  async preCheckProject(projectId: string, username: string) {
-    const isExist = await this.checkProjectExist(projectId);
-    if (!isExist) {
-      throw new BadRequestException('Project does not exist');
-    }
-    const isValid = await firstValueFrom(
-      this.client.send('checkProjectUserPermissions', {
-        projectId,
-        username,
-        permissions: ['write'],
-      }),
-    );
-    if (!isValid) {
-      throw new UnauthorizedException('User does not have permission');
-    }
-  }
-
   async updateProjectProperty(
     projectId: string,
-    { username, propertyName, propertyValue }: UpdatePropertyValueDto,
+    { propertyName, propertyValue }: UpdatePropertyValueDto,
   ) {
-    await this.preCheckProject(projectId, username);
     await this.neo4jService.write(
       `
       MATCH (p:Project {uuid: $projectId})
@@ -197,9 +179,8 @@ export class ProjectService implements OnModuleInit {
 
   async updateProjectPropertyName(
     projectId: string,
-    { username, propertyName, newPropertyName }: UpdatePropertyNameDto,
+    { propertyName, newPropertyName }: UpdatePropertyNameDto,
   ) {
-    await this.preCheckProject(projectId, username);
     await this.neo4jService.write(
       `
       MATCH (p:Project {uuid: $projectId})
@@ -213,9 +194,8 @@ export class ProjectService implements OnModuleInit {
 
   async deleteProjectProperty(
     projectId: string,
-    { username, propertyName }: UpdatePropertyDto,
+    { propertyName }: UpdatePropertyDto,
   ) {
-    await this.preCheckProject(projectId, username);
     await this.neo4jService.write(
       `
       MATCH (p:Project {uuid: $projectId})

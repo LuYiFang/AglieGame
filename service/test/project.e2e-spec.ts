@@ -4,10 +4,12 @@ import { ConfigService } from '@nestjs/config';
 import * as _ from 'lodash';
 import {
   createDefaultUsers,
+  login,
   setupContainers,
   startApp,
   teardownContainers,
 } from './setup';
+import { JwtService } from '@nestjs/jwt';
 
 const API_PREFIX = 'project';
 const NEO_PORT = 27876;
@@ -17,6 +19,7 @@ describe('Project (e2e)', () => {
   let app: INestApplication;
   let configService: ConfigService;
   let existProjectId: string;
+  let token: string;
 
   beforeAll(
     async () => await setupContainers(NEO_PORT, RABBIT_PORT),
@@ -27,6 +30,7 @@ describe('Project (e2e)', () => {
   beforeEach(async () => {
     const result = await startApp(NEO_PORT, RABBIT_PORT);
     app = result.app;
+    configService = result.configService;
   });
 
   afterEach(async () => {
@@ -35,6 +39,8 @@ describe('Project (e2e)', () => {
 
   it(`Create project`, async () => {
     await createDefaultUsers(app);
+
+    token = await login(app, 'Alice');
 
     const res = await request(app.getHttpServer())
       .post(`/${API_PREFIX}`)
@@ -60,6 +66,7 @@ describe('Project (e2e)', () => {
 
     await request(app.getHttpServer())
       .post(`/permission/project/${existProjectId}/user/Bob/roles`)
+      .set('Cookie', token)
       .send({
         roleNames: ['admin'],
       })
@@ -68,7 +75,8 @@ describe('Project (e2e)', () => {
 
   it(`Get user projects`, async () => {
     const res = await request(app.getHttpServer())
-      .get(`/${API_PREFIX}/user/Alice`)
+      .get(`/${API_PREFIX}/user`)
+      .set('Cookie', token)
       .expect(200);
 
     const data = res.body[0];
@@ -78,6 +86,7 @@ describe('Project (e2e)', () => {
   it(`Update property value`, () => {
     return request(app.getHttpServer())
       .patch(`/${API_PREFIX}/${existProjectId}/propertyValue`)
+      .set('Cookie', token)
       .send({
         username: 'Alice',
         propertyName: 'prize',
@@ -86,35 +95,53 @@ describe('Project (e2e)', () => {
       .expect(200);
   });
 
-  it(`Update property value not exist`, async () => {
-    const res = await request(app.getHttpServer())
-      .patch(`/${API_PREFIX}/notExist/propertyValue`)
+  it(`Update property value`, () => {
+    return request(app.getHttpServer())
+      .patch(`/${API_PREFIX}/${existProjectId}/propertyValue`)
       .send({
-        username: 'Alice',
         propertyName: 'prize',
         propertyValue: 5000,
       })
-      .expect(400);
+      .expect(401);
+  });
 
-    expect(res.body).toHaveProperty('message', 'Project does not exist');
+  it(`Update property value not exist`, async () => {
+    const res = await request(app.getHttpServer())
+      .patch(`/${API_PREFIX}/notExist/propertyValue`)
+      .set('Cookie', token)
+      .send({
+        propertyName: 'prize',
+        propertyValue: 5000,
+      })
+      .expect(403);
+
+    expect(res.body).toHaveProperty('message', 'Forbidden resource');
   });
 
   it(`Update property unauthorized`, async () => {
+    const jwtService = new JwtService({
+      secret: configService.get<string>('JWT_SECRET'),
+      signOptions: {
+        expiresIn: '1h',
+      },
+    });
+    const InvalidToken = jwtService.sign({ username: 'inValid', id: 'id' });
     const res = await request(app.getHttpServer())
       .patch(`/${API_PREFIX}/${existProjectId}/propertyValue`)
+      .set('Cookie', `token=${InvalidToken}`)
       .send({
-        username: 'invalid',
         propertyName: 'prize',
         propertyValue: 5000,
       })
       .expect(401);
 
-    expect(res.body).toHaveProperty('message', 'User does not have permission');
+    expect(res.body).toHaveProperty('message', 'Invalid user');
   });
 
   it(`Update property name`, () => {
     return request(app.getHttpServer())
       .patch(`/${API_PREFIX}/${existProjectId}/name/propertyName`)
+      .set('Cookie', token)
       .send({
         username: 'Alice',
         propertyName: 'prize',
@@ -126,6 +153,7 @@ describe('Project (e2e)', () => {
   it(`Delete property`, () => {
     return request(app.getHttpServer())
       .delete(`/${API_PREFIX}/${existProjectId}/property`)
+      .set('Cookie', token)
       .send({
         username: 'Alice',
         propertyName: 'slogan',
@@ -136,6 +164,7 @@ describe('Project (e2e)', () => {
   it(`Get projects update value`, async () => {
     const res = await request(app.getHttpServer())
       .get(`/${API_PREFIX}/${existProjectId}`)
+      .set('Cookie', token)
       .expect(200);
 
     const data = res.body;
@@ -143,16 +172,17 @@ describe('Project (e2e)', () => {
     expect(data).not.toHaveProperty('slogan');
   });
 
-  it(`Delete property`, () => {
+  it(`Delete project`, () => {
     return request(app.getHttpServer())
       .delete(`/${API_PREFIX}/${existProjectId}`)
+      .set('Cookie', token)
       .expect(200);
   });
 
   it(`Get projects deleted`, async () => {
     await request(app.getHttpServer())
       .get(`/${API_PREFIX}/${existProjectId}`)
-      .expect(200)
-      .expect({});
+      .set('Cookie', token)
+      .expect(403);
   });
 });

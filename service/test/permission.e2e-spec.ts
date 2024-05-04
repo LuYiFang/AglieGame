@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import * as _ from 'lodash';
 import {
   createDefaultUsers,
+  login,
   setupContainers,
   startApp,
   teardownContainers,
@@ -18,6 +19,7 @@ describe('PermissionController (e2e)', () => {
   let configService: ConfigService;
   let existProjectId: string;
   let anotherProjectId: string;
+  let token: string;
 
   beforeAll(
     async () => await setupContainers(NEO_PORT, RABBIT_PORT),
@@ -45,6 +47,8 @@ describe('PermissionController (e2e)', () => {
   it(`Create role (POST)`, async () => {
     await createDefaultUsers(app);
 
+    token = await login(app, 'Alice');
+
     let res = await request(app.getHttpServer())
       .post(`/project`)
       .send({
@@ -71,6 +75,7 @@ describe('PermissionController (e2e)', () => {
       _.map(['DM', 'player', 'NPC'], (role) => {
         return request(app.getHttpServer())
           .post(`/${API_PREFIX}/role`)
+          .set('Cookie', token)
           .send({
             projectId: existProjectId,
             name: role,
@@ -82,6 +87,7 @@ describe('PermissionController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post(`/${API_PREFIX}/role`)
+      .set('Cookie', token)
       .send({
         projectId: anotherProjectId,
         name: 'player',
@@ -93,18 +99,20 @@ describe('PermissionController (e2e)', () => {
   it(`Create role project not exist`, async () => {
     const res = await request(app.getHttpServer())
       .post(`/${API_PREFIX}/role`)
+      .set('Cookie', token)
       .send({
         projectId: 'notExistProject',
         name: 'DM',
         permissions: ['read', 'write'],
       })
-      .expect(400);
-    expect(res.body).toHaveProperty('message', 'Project not exists');
+      .expect(403);
+    expect(res.body).toHaveProperty('message', 'Forbidden resource');
   });
 
   it(`Create role role exist`, async () => {
     const res = await request(app.getHttpServer())
       .post(`/${API_PREFIX}/role`)
+      .set('Cookie', token)
       .send({
         projectId: existProjectId,
         name: 'DM',
@@ -117,6 +125,7 @@ describe('PermissionController (e2e)', () => {
   it(`Create role permission not exist`, async () => {
     const res = await request(app.getHttpServer())
       .post(`/${API_PREFIX}/role`)
+      .set('Cookie', token)
       .send({
         projectId: existProjectId,
         name: 'PO',
@@ -129,20 +138,22 @@ describe('PermissionController (e2e)', () => {
   it(`Get project roles`, async () => {
     const res = await request(app.getHttpServer())
       .get(`/${API_PREFIX}/project/${existProjectId}/roles`)
+      .set('Cookie', token)
       .expect(200);
     expect(res.body).toEqual(['DM', 'NPC', 'admin', 'player']);
   });
 
   it(`Get project roles empty`, async () => {
-    const res = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .get(`/${API_PREFIX}/project/notExist/roles`)
-      .expect(200);
-    expect(res.body).toEqual([]);
+      .set('Cookie', token)
+      .expect(403);
   });
 
   it(`Assign user role`, async () => {
     await request(app.getHttpServer())
       .post(`/${API_PREFIX}/project/${existProjectId}/user/Cathy/roles`)
+      .set('Cookie', token)
       .send({
         roleNames: ['DM', 'player'],
       })
@@ -150,6 +161,7 @@ describe('PermissionController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post(`/${API_PREFIX}/project/${existProjectId}/user/Bob/roles`)
+      .set('Cookie', token)
       .send({
         roleNames: ['player'],
       })
@@ -157,6 +169,7 @@ describe('PermissionController (e2e)', () => {
 
     const res = await request(app.getHttpServer())
       .post(`/${API_PREFIX}/project/${anotherProjectId}/user/Bob/roles`)
+      .set('Cookie', token)
       .send({
         roleNames: ['player'],
       })
@@ -166,6 +179,7 @@ describe('PermissionController (e2e)', () => {
   it(`Assign user role user not exist`, async () => {
     const res = await request(app.getHttpServer())
       .post(`/${API_PREFIX}/project/${existProjectId}/user/noExist/roles`)
+      .set('Cookie', token)
       .send({
         roleNames: ['DM', 'player'],
       })
@@ -176,6 +190,7 @@ describe('PermissionController (e2e)', () => {
   it(`Assign user role user not exist`, async () => {
     const res = await request(app.getHttpServer())
       .post(`/${API_PREFIX}/project/${existProjectId}/user/Cathy/roles`)
+      .set('Cookie', token)
       .send({
         roleNames: ['DM', 'notExist'],
       })
@@ -186,6 +201,7 @@ describe('PermissionController (e2e)', () => {
   it(`Get project user roles`, () => {
     return request(app.getHttpServer())
       .get(`/${API_PREFIX}/project/${existProjectId}/user/Cathy/roles`)
+      .set('Cookie', token)
       .expect(200)
       .expect(['DM', 'player']);
   });
@@ -193,6 +209,7 @@ describe('PermissionController (e2e)', () => {
   it(`Get project user roles empty`, () => {
     return request(app.getHttpServer())
       .get(`/${API_PREFIX}/project/${existProjectId}/user/noExit/roles`)
+      .set('Cookie', token)
       .expect(200)
       .expect([]);
   });
@@ -200,6 +217,7 @@ describe('PermissionController (e2e)', () => {
   it(`Update role permissions`, async () => {
     await request(app.getHttpServer())
       .put(`/${API_PREFIX}/project/${existProjectId}/role/DM`)
+      .set('Cookie', token)
       .send({
         permissions: ['create', 'write'],
       })
@@ -209,16 +227,18 @@ describe('PermissionController (e2e)', () => {
   it(`Update role permissions project not exist`, async () => {
     const res = await request(app.getHttpServer())
       .put(`/${API_PREFIX}/project/notEXist/role/DM`)
+      .set('Cookie', token)
       .send({
         permissions: ['create', 'write'],
       })
-      .expect(400);
-    expect(res.body).toHaveProperty('message', 'Project not exists');
+      .expect(403);
+    expect(res.body).toHaveProperty('message', 'Forbidden resource');
   });
 
   it(`Update role permissions role not exist`, async () => {
     const res = await request(app.getHttpServer())
       .put(`/${API_PREFIX}/project/${existProjectId}/role/AAA`)
+      .set('Cookie', token)
       .send({
         permissions: ['create', 'write'],
       })
@@ -229,12 +249,14 @@ describe('PermissionController (e2e)', () => {
   it(`Delete role`, async () => {
     const res = await request(app.getHttpServer())
       .delete(`/${API_PREFIX}/project/${existProjectId}/role/NPC`)
+      .set('Cookie', token)
       .expect(200);
   });
 
   it(`Delete role in use `, async () => {
     const res = await request(app.getHttpServer())
       .delete(`/${API_PREFIX}/project/${existProjectId}/role/player`)
+      .set('Cookie', token)
       .expect(409);
     expect(res.body).toHaveProperty('message', 'Role is still in use');
   });
@@ -242,6 +264,7 @@ describe('PermissionController (e2e)', () => {
   it(`Get roles permissions`, () => {
     return request(app.getHttpServer())
       .get(`/${API_PREFIX}/project/${existProjectId}/roles/permissions`)
+      .set('Cookie', token)
       .expect(200)
       .expect({
         DM: ['create', 'write'],
@@ -253,7 +276,7 @@ describe('PermissionController (e2e)', () => {
   it(`Get roles permissions empty`, () => {
     return request(app.getHttpServer())
       .get(`/${API_PREFIX}/project/noExist/roles/permissions`)
-      .expect(200)
-      .expect({});
+      .set('Cookie', token)
+      .expect(403);
   });
 });

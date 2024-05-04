@@ -8,6 +8,8 @@ import {
   Post,
   Put,
   Query,
+  Request,
+  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
@@ -21,6 +23,9 @@ import {
   UpdatePropertyValueDto,
 } from './dto/project.dto';
 import { MessagePattern, Payload } from '@nestjs/microservices';
+import { JwtGuard } from '../jwt.guard';
+import { PermissionGuard } from '../permission.guard';
+import { Permissions } from '../permission.decorator';
 
 @ApiTags('project')
 @Controller('project')
@@ -43,22 +48,29 @@ export class ProjectController {
     );
   }
 
-  @Get('user/:username')
-  async getUserProject(@Param('username') username: string) {
-    return await this.projectService.getUserProjects(username);
+  @UseGuards(JwtGuard)
+  @Get('user')
+  async getUserProject(@Request() req) {
+    return await this.projectService.getUserProjects(req.user);
   }
 
+  @UseGuards(JwtGuard, PermissionGuard)
   @Get(':projectId')
+  @Permissions(['read'])
   async getProject(@Param('projectId') projectId: string) {
     return await this.projectService.getProject(projectId, 'all');
   }
 
+  @UseGuards(JwtGuard, PermissionGuard)
   @Delete(':projectId')
+  @Permissions(['delete'])
   async deleteProject(@Param('projectId') projectId: string) {
     return await this.projectService.deleteProject(projectId);
   }
 
+  @UseGuards(JwtGuard, PermissionGuard)
   @Patch(':projectId/propertyValue')
+  @Permissions(['write'])
   @ApiBody({ type: UpdatePropertyValueDto })
   @UsePipes(new ValidationPipe())
   async updateProjectProperty(
@@ -71,7 +83,9 @@ export class ProjectController {
     );
   }
 
+  @UseGuards(JwtGuard, PermissionGuard)
   @Patch(':projectId/name/propertyName')
+  @Permissions(['write'])
   @ApiBody({ type: UpdatePropertyNameDto })
   @UsePipes(new ValidationPipe())
   async updatePropertyName(
@@ -84,7 +98,9 @@ export class ProjectController {
     );
   }
 
+  @UseGuards(JwtGuard, PermissionGuard)
   @Delete(':projectId/property')
+  @Permissions(['delete'])
   @ApiBody({ type: UpdatePropertyDto })
   @UsePipes(new ValidationPipe())
   async deleteProperty(

@@ -10,7 +10,7 @@ import { HandleNeo4jResult } from '../../common/decorators/extract-neo4j-record.
 import {
   Neo4jExtractMany,
   Neo4jExtractSingle,
-  Porperties,
+  Properties,
 } from '../../common/interfaces/common.interface';
 import { noe4jDateReturn } from '../../common/constants/common.constant';
 import { ClientProxy } from '@nestjs/microservices';
@@ -56,7 +56,7 @@ export class UserStoryService implements OnModuleInit {
   async writeUserStory(
     projectId: string,
     username: string,
-    properties: Porperties,
+    properties: Properties,
   ): Neo4jExtractSingle {
     return await this.neo4jService.write(
       `
@@ -102,7 +102,7 @@ export class UserStoryService implements OnModuleInit {
   async createUserStory(
     projectId: string,
     username: string,
-    properties: Porperties,
+    properties: Properties,
   ) {
     this.preCheck(projectId, username, ['create']);
 
@@ -112,7 +112,7 @@ export class UserStoryService implements OnModuleInit {
   async updateUserStory(
     projectId: string,
     username: string,
-    properties: Porperties,
+    properties: Properties,
   ) {
     this.preCheck(projectId, username, ['write']);
 

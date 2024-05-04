@@ -18,7 +18,7 @@ import { HandleNeo4jResult } from '../../common/decorators/extract-neo4j-record.
 import {
   Neo4jExtractMany,
   Neo4jExtractSingle,
-  Porperties,
+  Properties,
 } from '../../common/interfaces/common.interface';
 import * as _ from 'lodash';
 import {
@@ -177,11 +177,10 @@ export class AbilityService implements OnModuleInit {
     return true;
   }
 
-  async createAbilityType({
-    username,
-    name,
-    properties,
-  }: CreateAbilityTypeDto) {
+  async createAbilityType(
+    username: string,
+    { name, properties }: CreateAbilityTypeDto,
+  ) {
     if (!(await this.userService.checkUserExist(username))) {
       throw new BadRequestException('User not exist');
     }
@@ -201,12 +200,10 @@ export class AbilityService implements OnModuleInit {
     return successReturn;
   }
 
-  async createAbilitySubType({
-    username,
-    abilityTypeName,
-    name,
-    properties,
-  }: CreateAbilitySubTypeDto) {
+  async createAbilitySubType(
+    username: string,
+    { abilityTypeName, name, properties }: CreateAbilitySubTypeDto,
+  ) {
     if (!(await this.userService.checkUserExist(username))) {
       throw new BadRequestException('User not exist');
     }
@@ -230,13 +227,15 @@ export class AbilityService implements OnModuleInit {
     return successReturn;
   }
 
-  async createAbilityItemType({
-    username,
-    abilityTypeName,
-    abilitySubTypeName,
-    name,
-    properties,
-  }: CreateAbilityItemDto) {
+  async createAbilityItemType(
+    username: string,
+    {
+      abilityTypeName,
+      abilitySubTypeName,
+      name,
+      properties,
+    }: CreateAbilityItemDto,
+  ) {
     if (!(await this.userService.checkUserExist(username))) {
       throw new BadRequestException('User not exist');
     }
@@ -278,14 +277,16 @@ export class AbilityService implements OnModuleInit {
     return successReturn;
   }
 
-  async updateAbility({
-    username,
-    propertyName,
-    propertyValue,
-    abilityTypeName,
-    abilitySubTypeName,
-    itemName,
-  }: UpdateAbilityDto) {
+  async updateAbility(
+    username: string,
+    {
+      propertyName,
+      propertyValue,
+      abilityTypeName,
+      abilitySubTypeName,
+      itemName,
+    }: UpdateAbilityDto,
+  ) {
     if (!(await this.userService.checkUserExist(username))) {
       throw new BadRequestException('User not exist');
     }
@@ -359,13 +360,15 @@ export class AbilityService implements OnModuleInit {
   //   return successReturn;
   // }
 
-  async deleteProperty({
-    username,
-    property,
-    abilityTypeName,
-    abilitySubTypeName,
-    itemName,
-  }: DeleteAbilityPropertyDto) {
+  async deleteProperty(
+    username: string,
+    {
+      property,
+      abilityTypeName,
+      abilitySubTypeName,
+      itemName,
+    }: DeleteAbilityPropertyDto,
+  ) {
     if (
       abilitySubTypeName &&
       !(await this.checkAbilityExist(
@@ -401,12 +404,10 @@ export class AbilityService implements OnModuleInit {
     );
   }
 
-  async deleteAbility({
-    username,
-    abilityTypeName,
-    abilitySubTypeName,
-    itemName,
-  }: AbilityDto) {
+  async deleteAbility(
+    username: string,
+    { abilityTypeName, abilitySubTypeName, itemName }: AbilityDto,
+  ) {
     if (
       abilitySubTypeName &&
       !(await this.checkAbilityExist(
