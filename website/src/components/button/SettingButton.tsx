@@ -1,5 +1,7 @@
-import { FC } from "react";
+import { FC, useState } from "react";
 import {
+  Button,
+  IconButton,
   SpeedDial,
   SpeedDialAction,
   SpeedDialProps,
@@ -12,6 +14,8 @@ import ClearIcon from "@mui/icons-material/Clear";
 import DetailsIcon from "@mui/icons-material/Details";
 import _ from "lodash";
 import { direction, actionType } from "@/types/user.types";
+import UserSettingDialog from "../dialog/UserSettingDialog";
+import AddList from "../list/AddList";
 
 const blockActions = [
   { icon: <DetailsIcon />, name: "Setting" },
@@ -29,31 +33,17 @@ interface MySpeedDialProps extends SpeedDialProps {
   direction?: "up" | "down";
 }
 
-const SpeedDialTransparent = styled(SpeedDial)<MySpeedDialProps>(
-  ({ theme, direction, actionsLength }) => ({
-    position: "absolute",
-    top: direction === "down" ? 0 : -(actionsLength + 1) * 24 - 8,
-    right: 0,
-    padding: 0,
-    zIndex: 1,
-    opacity: 0,
-    "&:hover": {
-      opacity: 1,
-    },
-
-    "& .MuiSpeedDial-fab": {
-      minHeight: 24,
-      height: 24,
-      width: 24,
-      backgroundColor: "transparent",
-      color: "rgba(0, 0, 0, 0.6)",
-      boxShadow: "none",
-    },
-    "& .MuiSpeedDial-fab:hover": {
-      backgroundColor: "transparent",
-    },
-  }),
-);
+const IconButtonFixed = styled(IconButton)(({ theme }) => ({
+  position: "absolute",
+  top: 0,
+  right: 0,
+  padding: 0,
+  zIndex: 1,
+  opacity: 0,
+  "&:hover": {
+    opacity: 1,
+  },
+}));
 
 const SpeedDialActionTransparent = styled(SpeedDialAction)(({ theme }) => ({
   "&.MuiSpeedDialAction-fab": {
@@ -69,28 +59,26 @@ const SettingButton: FC<{
   settable?: boolean;
   actionType?: actionType;
   direction?: direction;
+  data: any[];
 }> = (props) => {
-  const { settable, actionType = "block", direction = "down" } = props;
+  const { settable, actionType = "block", direction = "down", data } = props;
+
+  const [open, setOpen] = useState(false);
 
   const actions = actionType === "block" ? blockActions : itemActions;
 
+  const handleClose = () => {
+    setOpen(false);
+  };
+
   return (
     <>
-      <SpeedDialTransparent
-        ariaLabel="Settings"
-        hidden={!settable}
-        icon={<SettingsIcon />}
-        direction={direction}
-        actionsLength={actions.length}
-      >
-        {_.map(actions, (action) => (
-          <SpeedDialActionTransparent
-            key={action.name}
-            icon={action.icon}
-            tooltipTitle={action.name}
-          />
-        ))}
-      </SpeedDialTransparent>
+      <IconButtonFixed onClick={() => setOpen(!open)}>
+        <SettingsIcon />
+      </IconButtonFixed>
+      <UserSettingDialog open={open} onClose={handleClose}>
+        <AddList data={data} />
+      </UserSettingDialog>
     </>
   );
 };
