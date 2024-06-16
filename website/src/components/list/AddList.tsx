@@ -12,6 +12,20 @@ import AddIcon from "@mui/icons-material/Add";
 import * as _ from "lodash";
 import TextField from "../input/TextField";
 
+const SiFiListItem = styled(ListItem)(({ theme }) => ({
+  backgroundColor: "#222B4C",
+  border: "1px solid #4a5681",
+  marginBottom: "2px",
+}));
+
+const SiFiIconButton = styled(IconButton)(({ theme }) => ({
+  "&:hover": {
+    backgroundColor: "rgba(28,37,71)",
+  },
+  borderRadius: 0,
+  color: "#F6F9FA",
+}));
+
 const SettingList = styled(List)(({ theme }) => ({
   width: 600,
   [theme.breakpoints.down("sm")]: {
@@ -65,11 +79,11 @@ const AddList: FC<{ data?: any[] }> = ({
       <SettingList>
         {_.map(valueList, (row, i) => {
           return (
-            <ListItem
+            <SiFiListItem
               key={`setting-item-${i}`}
               dense
               secondaryAction={
-                <IconButton
+                <SiFiIconButton
                   edge="end"
                   aria-label="delete"
                   onClick={() => {
@@ -77,7 +91,7 @@ const AddList: FC<{ data?: any[] }> = ({
                   }}
                 >
                   <ClearIcon />
-                </IconButton>
+                </SiFiIconButton>
               }
             >
               <ListItemButton
@@ -97,7 +111,7 @@ const AddList: FC<{ data?: any[] }> = ({
                   }}
                 />
               </ListItemButton>
-            </ListItem>
+            </SiFiListItem>
           );
         })}
         <ListItemButton

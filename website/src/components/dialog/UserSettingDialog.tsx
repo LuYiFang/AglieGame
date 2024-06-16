@@ -1,5 +1,18 @@
-import { Dialog, DialogTitle } from "@mui/material";
+import { Dialog, DialogTitle, styled } from "@mui/material";
 import { FC, ReactNode } from "react";
+
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  "& .MuiDialog-paper": {
+    backgroundColor: "rgba(28,37,71,0.9)",
+    border: "2px solid #80B0D8",
+    borderRadius: 0,
+    color: "#F6F9FA",
+    outline: "1px solid #80B0D8",
+    outlineOffset: 2,
+    paddingLeft: theme.spacing(1),
+    paddingRight: theme.spacing(1),
+  },
+}));
 
 const UserSettingDialog: FC<{
   open: boolean;
@@ -14,10 +27,10 @@ const UserSettingDialog: FC<{
 
   return (
     <>
-      <Dialog onClose={handleClose} open={open}>
+      <StyledDialog onClose={handleClose} open={open}>
         <DialogTitle>Setting</DialogTitle>
         {children}
-      </Dialog>
+      </StyledDialog>
     </>
   );
 };

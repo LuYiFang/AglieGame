@@ -13,7 +13,11 @@ import _ from "lodash";
 import { useRef, useEffect, FC } from "react";
 import SettingButton from "@/components/button/SettingButton";
 import RadarChart from "@/components/chart/RadarChart";
-import { AreaBlock, SubTypeBlock } from "@/components/block/UserBlock";
+import {
+  AreaBlock,
+  ScrollXBlock,
+  SubTypeBlock,
+} from "@/components/block/UserBlock";
 import {
   eqpList,
   personality,
@@ -22,8 +26,11 @@ import {
   skillList,
 } from "@/utilities/fakeData";
 import SkillCircular from "@/components/Circular/SkillCircular";
-import { Equipment, LevelCircle, Quality } from "@/components/item/userItem";
+import { Equipment, Quality } from "@/components/item/userItem";
 import Grid from "@/components/block/Grid";
+import LevelCircle from "@/components/Circular/LevelCircle";
+
+const skillHeight = 200;
 
 export default function User() {
   return (
@@ -46,28 +53,56 @@ export default function User() {
         })}
       >
         <Grid container xs={12} sx={{ flex: 2 }}>
-          <AreaBlock container settable xs={12} md={3}>
+          <AreaBlock container settable xs={12} md={3} sx={{ zIndex: 1 }}>
             {_.map(eqpList, (eqps, type) => (
-              <SubTypeBlock key={`${type}`} xs={12} settable direction="down">
+              <SubTypeBlock
+                key={`${type}`}
+                xs={12}
+                settable
+                direction="down"
+                sx={{ flexDirection: "column" }}
+              >
                 {_.map(eqps, (eqp) => (
                   <Equipment key={`${eqp.name}`} name={eqp.name} settable />
                 ))}
               </SubTypeBlock>
             ))}
           </AreaBlock>
-          <AreaBlock xs={12} md={6} settable direction="down">
+          <AreaBlock
+            xs={12}
+            md={6}
+            settable
+            direction="down"
+            sx={{ backgroundColor: "#FBFBFB" }}
+          >
             <Box
               sx={(theme) => ({
-                backgroundColor: "white",
+                backgroundColor: "transparent",
                 width: "100%",
                 height: "100%",
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                zIndex: 0,
                 [theme.breakpoints.down("md")]: {
                   height: 500,
                 },
               })}
-            ></Box>
+            >
+              <img
+                src="/charactar3.jpg"
+                style={{
+                  zIndex: 0,
+                  maxHeight: `calc(100vh - ${skillHeight + 32}px)`,
+                  // height: "100vh",
+                }}
+              />
+            </Box>
             <Box
               sx={{
+                position: "absolute",
+                bottom: 8,
                 display: "flex",
                 justifyContent: "center",
                 width: "100%",
@@ -77,7 +112,7 @@ export default function User() {
               {_.map(personality, (v) => {
                 return (
                   <Box key={v} sx={{ position: "relative" }}>
-                    <SettingButton settable actionType="item" />
+                    <SettingButton settable actionType="item" data={[]} />
                     <Chip
                       label={v}
                       // size="80"
@@ -87,6 +122,10 @@ export default function User() {
                         borderRadius: 0,
                         fontSize: 16,
                         height: 48,
+                        border: "1px solid #80B0D8",
+                        boxShadow: "0 0 5px #125585",
+                        backgroundColor: "rgba(28,37,71,0.9)",
+                        color: "#F6F9FA",
                       }}
                     />
                   </Box>
@@ -103,7 +142,7 @@ export default function User() {
                 backgroundColor: "transparent",
               }}
             >
-              <SettingButton settable />
+              <SettingButton settable data={[]} />
               <RadarChart data={polarData} />
             </Box>
           </AreaBlock>
@@ -135,10 +174,10 @@ export default function User() {
           container
           xs={12}
           sx={(theme) => ({
-            minHeight: "200px",
-            maxHeight: "200px",
+            minHeight: skillHeight,
+            maxHeight: skillHeight,
             [theme.breakpoints.down("md")]: {
-              maxHeight: "500px",
+              maxHeight: 50,
             },
             flex: 1,
           })}
@@ -155,7 +194,17 @@ export default function User() {
           >
             <LevelCircle />
           </AreaBlock>
-          <AreaBlock settable direction="down" xs={12} md={11}>
+          <AreaBlock
+            settable
+            direction="down"
+            xs={12}
+            md={11}
+            onWheel={(e: WheelEvent) => {
+              // e.preventDefault();
+              const container = e.currentTarget as HTMLDivElement;
+              container.scrollLeft += e.deltaY;
+            }}
+          >
             <Box
               sx={{
                 overflowX: "auto",
@@ -183,7 +232,7 @@ export default function User() {
                       key={`${item.name}`}
                       sx={{ position: "relative", width: 100 }}
                     >
-                      <SettingButton settable />
+                      <SettingButton settable data={[]} />
                       <SkillCircular name={item.name} score={item.score} />
                     </Box>
                   ))}
