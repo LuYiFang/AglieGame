@@ -10,15 +10,16 @@
     "format": "prettier --write \"src/**/*.tsx\" \"test/**/*.tsx\""
   },
   "dependencies": {
-    "@emotion/react": "^11.11.4",
-    "@emotion/styled": "^11.11.5",
-    "@mui/icons-material": "^5.15.17",
-    "@mui/material": "^5.15.17",
+    "@emotion/react": "^11.13.3",
+    "@emotion/styled": "^11.13.0",
+    "@mui/icons-material": "^6.1.1",
+    "@mui/material": "^6.1.1",
     "axios": "^1.6.8",
     "lodash": "^4.17.21",
     "next": "14.2.3",
     "plotly.js": "^2.32.0",
     "prettier": "^3.2.5",
+    "prop-types": "^15.8.1",
     "react": "^18",
     "react-dom": "^18",
     "react-plotly.js": "^2.6.0"
@@ -32,6 +33,7 @@
     "@types/react-plotly.js": "^2.6.3",
     "eslint": "^8",
     "eslint-config-next": "14.2.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "uuid": "^10.0.0"
   }
 }

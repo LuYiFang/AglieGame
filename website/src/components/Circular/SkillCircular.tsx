@@ -1,7 +1,10 @@
-import { useRef, useEffect, FC } from "react";
+import { useRef, useEffect, FC, useState } from "react";
 import { styled } from "@mui/material/styles";
 import _ from "lodash";
-import { Box, Typography } from "@mui/material";
+import { Box, IconButton, Typography } from "@mui/material";
+import TextField from "../input/TextField";
+import ClearIcon from "@mui/icons-material/Clear";
+import { SiFiIconButton } from "../item/SifiItem";
 
 const SIZE = 100;
 const strokeDashoffset = (SIZE * 503) / 180;
@@ -25,15 +28,15 @@ const Edge = styled("div")(({ theme }) => ({
   width: `calc(100% - ${(SIZE * 50) / 180}px)`,
   height: `calc(100% - ${(SIZE * 50) / 180}px)`,
   borderRadius: "50%",
-  backgroundColor: "#292929",
-  boxShadow: `0 0 ${(SIZE * 5) / 180}px ${(SIZE * 3) / 180}px #222121`,
+  backgroundColor: "#1c2547b3",
+  boxShadow: `0 0 ${(SIZE * 5) / 180}px ${(SIZE * 3) / 180}px #507b9b`,
   "&::before": {
     position: "absolute",
     content: '""',
     width: `calc(100% + ${(SIZE * 28) / 180}px)`,
     height: `calc(100% + ${(SIZE * 28) / 180}px)`,
     borderRadius: "50%",
-    border: "1px solid #353535",
+    border: "1px solid #13294a",
   },
 }));
 
@@ -53,7 +56,7 @@ const Dot = styled("span")(({ theme }) => ({
     top: (SIZE * 5) / 180,
     left: "50%",
     borderRadius: "50%",
-    backgroundColor: "#b7b5b5",
+    backgroundColor: "#fff",
     boxShadow: `0 0 ${(SIZE * 5) / 180}px ${(SIZE * 2) / 180}px #585858`,
     transform: "translateX(-50%)",
   },
@@ -79,10 +82,22 @@ const Circle = styled("circle")(({ theme }) => ({
 }));
 
 const SkillCircular: FC<{
-  name: string;
-  score: number;
+  name?: string;
+  score?: number | string;
+  onDelete?: (...args: any[]) => void;
+  onUpdate?: (...args: any[]) => void;
 }> = (props) => {
-  const { name, score } = props;
+  const {
+    name: defaultName = "",
+    score: defaultScore = 0,
+    onDelete = () => {},
+    onUpdate = () => {},
+  } = props;
+
+  const [name, setName] = useState<string>(defaultName);
+  const [score, setScore] = useState<number>(
+    parseInt(`${defaultScore}`) as number,
+  );
 
   const circleRef = useRef<SVGCircleElement | null>(null);
   const dotsRef = useRef<HTMLSpanElement | null>(null);
@@ -106,7 +121,9 @@ const SkillCircular: FC<{
         }
       }, time);
 
-      circle.style.strokeDashoffset = `${strokeDashoffset - strokeDashoffset * (score / 100)}`;
+      circle.style.strokeDashoffset = `${
+        strokeDashoffset - strokeDashoffset * (score / 100)
+      }`;
       dots.style.transform = `rotate(${360 * (score / 100)}deg)`;
       if (score == 100) {
         dots.style.opacity = "0";
@@ -114,33 +131,79 @@ const SkillCircular: FC<{
     };
 
     runCircle();
-  }, []);
+  }, [score]);
 
   return (
-    <Box sx={{ maxWidth: SIZE }}>
+    <Box sx={{ maxWidth: SIZE, position: "relative", width: 100 }}>
+      <IconButton
+        onClick={onDelete}
+        sx={{
+          position: "absolute",
+          right: 0,
+          top: 0,
+          zIndex: 1,
+          backgroundColor: "transparent",
+          color: "transparent",
+          "&:hover": {
+            backgroundColor: "rgba(106,129,163, 0.7)",
+            color: "#fff",
+          },
+        }}
+      >
+        <ClearIcon />
+      </IconButton>
       <Block>
         <Edge>
-          <p className="number">
-            <span
-              style={{
+          <div
+            style={{
+              padding: 10,
+              display: "flex",
+            }}
+          >
+            <TextField
+              type="number"
+              value={score}
+              onChange={(e) => {
+                setScore(parseInt(e.target.value));
+                onUpdate(null, e.target.value);
+              }}
+              sx={{
+                zIndex: 2,
                 fontSize: (SIZE * 35) / 180,
                 fontWeight: "bold",
                 color: "#e9e9e9",
+                "& ::-webkit-outer-spin-button": {
+                  "-webkit-appearance": "none",
+                  margin: 0,
+                },
+                "& ::-webkit-inner-spin-button": {
+                  "-webkit-appearance": "none",
+                  margin: 0,
+                },
+              }}
+              inputProps={{
+                style: {
+                  textAlign: "center",
+                },
+              }}
+            />
+            <span
+              style={{
+                fontSize: (SIZE * 20) / 180,
+                color: "#e9e9e9",
+                paddingTop: 8,
               }}
             >
-              {score}
-            </span>
-            <span style={{ fontSize: (SIZE * 20) / 180, color: "#e9e9e9" }}>
               %
             </span>
-          </p>
+          </div>
         </Edge>
         <Dot ref={dotsRef}></Dot>
         <Svg>
           <defs>
             <linearGradient id="gradientStyle">
-              <stop offset="0%" stopColor="#565656" />
-              <stop offset="100%" stopColor="#b7b5b5" />
+              <stop offset="0%" stopColor="#fff" />
+              <stop offset="100%" stopColor="#8793B8" />
             </linearGradient>
           </defs>
           <Circle
@@ -151,7 +214,22 @@ const SkillCircular: FC<{
           />
         </Svg>
       </Block>
-      <Typography noWrap>{name}</Typography>
+      <TextField
+        value={name}
+        onChange={(e) => {
+          setName(e.target.value);
+          onUpdate(e.target.value, null);
+        }}
+        inputProps={{
+          style: {
+            textAlign: "center",
+            color: "#fff",
+            fontWeight: 550,
+            paddingRight: 4,
+            paddingLeft: 4,
+          },
+        }}
+      />
     </Box>
   );
 };

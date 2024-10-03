@@ -1,8 +1,10 @@
-import { FC, ReactNode, forwardRef, useEffect, useRef } from "react";
-import { BlockType } from "@/types/user.types";
+import { FC, ReactNode, forwardRef, useEffect, useRef, useState } from "react";
+import { BlockType } from "../../types/user.types";
 import SettingButton from "../button/SettingButton";
-import Grid from "@/components/block/Grid";
-import { Box, styled } from "@mui/material";
+import Grid from "@mui/material/Grid2";
+import { Box, Button, styled, Typography } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import { SifiAddButton } from "../item/SifiItem";
 
 export const SiFiBox = styled(Box)(({ theme }) => ({
   border: "1px solid #80B0D8",
@@ -22,22 +24,38 @@ const AreaBlockGrid = styled(Grid)(({ theme }) => ({
   display: "flex",
   justifyContent: "start",
   alignItems: "start",
-  flexDirection: "column",
+  // flexDirection: "column",
   position: "relative",
   backgroundColor: "rgba(80, 136, 200, 0.6)",
+
+  overflowY: "auto",
+  flexDirection: "row",
 }));
 
 export const AreaBlock: FC<BlockType> = forwardRef<HTMLDivElement, BlockType>(
   (props, ref) => {
-    const { sx, children, settable, direction, ...others } = props;
+    const {
+      sx,
+      children,
+      settable,
+      direction,
+      data,
+      onAdd = () => {},
+      onDelete = () => {},
+      onUpdate = () => {},
+      ...others
+    } = props;
 
     return (
       <AreaBlockGrid ref={ref} sx={{ ...sx }} {...others}>
         <SettingButton
           settable={settable}
-          actionType={"block"}
           direction={direction}
-          data={[]}
+          data={data}
+          showSubType={true}
+          onAdd={onAdd}
+          onDelete={onDelete}
+          onUpdate={onUpdate}
         />
         {children}
       </AreaBlockGrid>
@@ -60,18 +78,35 @@ const SubTypeBlockGrid = styled(Grid)(({ theme }) => ({
 }));
 
 export const SubTypeBlock: FC<BlockType> = (props) => {
-  const { sx, children, settable, direction, ...others } = props;
+  const {
+    title,
+    sx,
+    children,
+    settable,
+    direction,
+    onAdd = () => {},
+    ...others
+  } = props;
 
   return (
-    <SubTypeBlockGrid sx={{ ...sx }} {...others}>
-      <SettingButton
-        settable={settable}
-        actionType={"block"}
-        direction={direction}
-        data={[]}
-      />
-      {children}
-    </SubTypeBlockGrid>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "start",
+        ...(direction === "down" && { height: "100%" }),
+        width: "100%",
+      }}
+    >
+      <Typography variant="h6" color="rgba(28,37,71)">
+        {title}
+      </Typography>
+      <SubTypeBlockGrid sx={{ ...sx }} {...others}>
+        <SettingButton settable={settable} direction={direction} data={[]} />
+        {children}
+        <SifiAddButton direction={direction} onAdd={onAdd} />
+      </SubTypeBlockGrid>
+    </div>
   );
 };
 

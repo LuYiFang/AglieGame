@@ -13,9 +13,9 @@ import EditIcon from "@mui/icons-material/Edit";
 import ClearIcon from "@mui/icons-material/Clear";
 import DetailsIcon from "@mui/icons-material/Details";
 import _ from "lodash";
-import { direction, actionType } from "@/types/user.types";
-import UserSettingDialog from "../dialog/UserSettingDialog";
+import { direction, actionType } from "../../types/user.types";
 import AddList from "../list/AddList";
+import UserSettingDialog from "../dialog/UserSettingDialog";
 
 const blockActions = [
   { icon: <DetailsIcon />, name: "Setting" },
@@ -57,15 +57,24 @@ const SpeedDialActionTransparent = styled(SpeedDialAction)(({ theme }) => ({
 
 const SettingButton: FC<{
   settable?: boolean;
-  actionType?: actionType;
   direction?: direction;
   data: any[];
+  showSubType?: boolean;
+  onAdd?: (...args: any[]) => void;
+  onDelete?: (...args: any[]) => void;
+  onUpdate?: (...args: any[]) => void;
 }> = (props) => {
-  const { settable, actionType = "block", direction = "down", data } = props;
+  const {
+    settable,
+    direction = "down",
+    data,
+    showSubType,
+    onAdd = () => {},
+    onDelete = () => {},
+    onUpdate = () => {},
+  } = props;
 
   const [open, setOpen] = useState(false);
-
-  const actions = actionType === "block" ? blockActions : itemActions;
 
   const handleClose = () => {
     setOpen(false);
@@ -77,7 +86,13 @@ const SettingButton: FC<{
         <SettingsIcon />
       </IconButtonFixed>
       <UserSettingDialog open={open} onClose={handleClose}>
-        <AddList data={data} />
+        <AddList
+          data={data}
+          showSubType={showSubType}
+          onAdd={onAdd}
+          onDelete={onDelete}
+          onUpdate={onUpdate}
+        />
       </UserSettingDialog>
     </>
   );
