@@ -1,4 +1,4 @@
-import { FC, useState } from "react";
+import { FC, useRef, useState } from "react";
 import {
   Button,
   IconButton,
@@ -60,24 +60,22 @@ const SettingButton: FC<{
   direction?: direction;
   data: any[];
   showSubType?: boolean;
-  onAdd?: (...args: any[]) => void;
-  onDelete?: (...args: any[]) => void;
-  onUpdate?: (...args: any[]) => void;
+  onSave?: (...args: any[]) => void;
 }> = (props) => {
   const {
     settable,
     direction = "down",
     data,
     showSubType,
-    onAdd = () => {},
-    onDelete = () => {},
-    onUpdate = () => {},
+    onSave = () => {},
   } = props;
 
   const [open, setOpen] = useState(false);
+  const listRef = useRef();
 
   const handleClose = () => {
     setOpen(false);
+    onSave(listRef.current?.getValue());
   };
 
   return (
@@ -86,13 +84,7 @@ const SettingButton: FC<{
         <SettingsIcon />
       </IconButtonFixed>
       <UserSettingDialog open={open} onClose={handleClose}>
-        <AddList
-          data={data}
-          showSubType={showSubType}
-          onAdd={onAdd}
-          onDelete={onDelete}
-          onUpdate={onUpdate}
-        />
+        <AddList ref={listRef} data={data} showSubType={showSubType} />
       </UserSettingDialog>
     </>
   );

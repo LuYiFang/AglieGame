@@ -2,6 +2,7 @@ import { FC, ReactNode, forwardRef, useEffect, useRef, useState } from "react";
 import { BlockType } from "../../types/user.types";
 import SettingButton from "../button/SettingButton";
 import Grid from "@mui/material/Grid2";
+// import Grid from "./Grid";
 import { Box, Button, styled, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { SifiAddButton } from "../item/SifiItem";
@@ -24,7 +25,6 @@ const AreaBlockGrid = styled(Grid)(({ theme }) => ({
   display: "flex",
   justifyContent: "start",
   alignItems: "start",
-  // flexDirection: "column",
   position: "relative",
   backgroundColor: "rgba(80, 136, 200, 0.6)",
 
@@ -40,9 +40,7 @@ export const AreaBlock: FC<BlockType> = forwardRef<HTMLDivElement, BlockType>(
       settable,
       direction,
       data,
-      onAdd = () => {},
-      onDelete = () => {},
-      onUpdate = () => {},
+      onSave = () => {},
       ...others
     } = props;
 
@@ -53,9 +51,7 @@ export const AreaBlock: FC<BlockType> = forwardRef<HTMLDivElement, BlockType>(
           direction={direction}
           data={data}
           showSubType={true}
-          onAdd={onAdd}
-          onDelete={onDelete}
-          onUpdate={onUpdate}
+          onSave={onSave}
         />
         {children}
       </AreaBlockGrid>

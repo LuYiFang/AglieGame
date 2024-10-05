@@ -1,4 +1,13 @@
-import { FC, KeyboardEvent, useCallback, useEffect, useState } from "react";
+import {
+  FC,
+  forwardRef,
+  ForwardRefRenderFunction,
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useState,
+} from "react";
 import {
   Box,
   Divider,
@@ -15,6 +24,7 @@ import AddIcon from "@mui/icons-material/Add";
 import * as _ from "lodash";
 import TextField from "../input/TextField";
 import { SiFiIconButton } from "../item/SifiItem";
+import { v4 as uuidv4 } from "uuid";
 
 const SiFiListItem = styled(ListItem)(({ theme }) => ({
   backgroundColor: "#222B4C",
@@ -29,24 +39,22 @@ const SettingList = styled(List)(({ theme }) => ({
   },
 }));
 
-const AddList: FC<{
-  data?: any[];
-  showSubType?: boolean;
-  onAdd?: (...args: any[]) => void;
-  onDelete?: (...args: any[]) => void;
-  onUpdate?: (...args: any[]) => void;
-}> = ({
-  showSubType = false,
-  data = [
-    { property: "eefefef", value: "123" },
-    { property: "efwfokokg", value: 789 },
-  ],
-  onAdd = () => {},
-  onDelete = () => {},
-  onUpdate = () => {},
-}) => {
+const AddList: ForwardRefRenderFunction<
+  any,
+  {
+    data?: any[];
+    showSubType?: boolean;
+    onSave?: (...args: any[]) => void;
+  }
+> = ({ showSubType = false, data = [] }, ref) => {
   const [typeList, setTypeList] = useState<any[]>([]);
-  const [valueList, setValueList] = useState<any[]>([]);
+  const [propertyList, setPropertyList] = useState<any[]>([]);
+
+  useImperativeHandle(ref, () => ({
+    getValue: () => {
+      return { typeList, propertyList };
+    },
+  }));
 
   useEffect(() => {
     const [newTypeList, newValueList] = _.partition(
@@ -54,9 +62,7 @@ const AddList: FC<{
       (v) => v.type === "subType",
     );
     setTypeList(newTypeList);
-    setValueList(newValueList);
-    // console.log("typeList", newTypeList);
-    // console.log("valueList", newValueList);
+    setPropertyList(newValueList);
   }, [data]);
 
   return (
@@ -67,8 +73,7 @@ const AddList: FC<{
             blockName={"Sub Type"}
             targetList={typeList}
             setTargetList={setTypeList}
-            itemDefault={{ property: "" }}
-            onAdd={onAdd}
+            itemDefault={{ name: "" }}
           />
         ) : (
           ""
@@ -76,49 +81,37 @@ const AddList: FC<{
         {showSubType ? <Divider /> : ""}
         <AddItemListBlock
           blockName={"Properties"}
-          targetList={valueList}
-          setTargetList={setValueList}
-          itemDefault={{ property: "", value: "" }}
-          onAdd={onAdd}
+          targetList={propertyList}
+          setTargetList={setPropertyList}
+          itemDefault={{ name: "", value: "" }}
         />
       </SettingList>
     </>
   );
 };
-export default AddList;
+export default forwardRef(AddList);
 
 const AddItemListBlock: FC<{
   blockName: string;
   targetList: any[];
   setTargetList: (arg: any) => void;
   itemDefault?: any;
-  onAdd?: (...args: any[]) => void;
-  onDelete?: (...args: any[]) => void;
-  onUpdate?: (...args: any[]) => void;
 }> = (props) => {
-  const {
-    blockName,
-    targetList,
-    setTargetList,
-    itemDefault,
-    onAdd = () => {},
-    onDelete = () => {},
-    onUpdate = () => {},
-  } = props;
+  const { blockName, targetList, setTargetList, itemDefault } = props;
 
   //加了什麼?刪了什麼?
   // 有東西不能刪
 
   const handleAddItem = () => {
-    setTargetList([...targetList, { ...itemDefault }]);
+    setTargetList([...targetList, { ...itemDefault, id: uuidv4() }]);
   };
 
   const handleUpdateItem = (
     index: number,
-    property: string | null,
+    name: string | null,
     value: string | number | null,
   ) => {
-    if (property === null && value === null) {
+    if (name === null && value === null) {
       return;
     }
 
@@ -128,10 +121,10 @@ const AddItemListBlock: FC<{
     };
 
     if (value === null) {
-      newItem["property"] = property;
+      newItem["name"] = name;
     }
 
-    if (property === null) {
+    if (name === null) {
       newItem["value"] = value;
     }
 

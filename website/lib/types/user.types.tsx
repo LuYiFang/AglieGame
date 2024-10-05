@@ -12,8 +12,7 @@ export interface BlockType {
   settable?: boolean;
   direction?: direction;
   onAdd?: (...args: any[]) => void;
-  onDelete?: (...args: any[]) => void;
-  onUpdate?: (...args: any[]) => void;
+  onSave?: (...args: any[]) => void;
   [key: string]: any;
 }
 
