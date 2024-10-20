@@ -1,15 +1,11 @@
 import type { Action, ThunkAction } from "@reduxjs/toolkit";
 import { combineSlices, configureStore } from "@reduxjs/toolkit";
-import { eqpSlice, personalitySlice, qualitySlice, skillSlice, userAdapter } from "./features/user/userSlice";
+import { sliceNameList, slices, userAdapter } from "./features/user/userSlice";
+import * as _ from "lodash";
 
 // `combineSlices` automatically combines the reducers using
 // their `reducerPath`s, therefore we no longer need to call `combineReducers`.
-const rootReducer = combineSlices(
-  skillSlice,
-  eqpSlice,
-  qualitySlice,
-  personalitySlice,
-);
+const rootReducer = combineSlices(..._.values(slices));
 // Infer the `RootState` type from the root reducer
 export type RootState = ReturnType<typeof rootReducer>;
 
@@ -39,17 +35,17 @@ export type AppThunk<ThunkReturnType = void> = ThunkAction<
   Action
 >;
 
+const selectors = {};
 
+const createSelector = (name) => {
+  const { selectAll } = userAdapter.getSelectors<RootState>(
+    (state) => state[name],
+  );
+  selectors[`${name}All`] = selectAll;
+};
 
-export const { selectAll: selectAllSkills } =
-  userAdapter.getSelectors<RootState>((state) => state.skills);
+_.each(sliceNameList, (name) => {
+  createSelector(name);
+});
 
-export const { selectAll: selectAllEqps } = userAdapter.getSelectors<RootState>(
-  (state) => state.eqps,
-);
-
-export const { selectAll: selectAllQuality } =
-  userAdapter.getSelectors<RootState>((state) => state.qualities);
-
-export const { selectAll: selectAllPersonality } =
-  userAdapter.getSelectors<RootState>((state) => state.personalities);
+export { selectors };

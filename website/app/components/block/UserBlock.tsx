@@ -1,11 +1,11 @@
 import { FC, ReactNode, forwardRef, useEffect, useRef, useState } from "react";
-import { BlockType } from "../../types/user.types";
 import SettingButton from "../button/SettingButton";
 import Grid from "@mui/material/Grid2";
 // import Grid from "./Grid";
 import { Box, Button, styled, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { SifiAddButton } from "../item/SifiItem";
+import { BlockType } from "@/lib/types/user.types";
 
 export const SiFiBox = styled(Box)(({ theme }) => ({
   border: "1px solid #80B0D8",
@@ -30,6 +30,8 @@ const AreaBlockGrid = styled(Grid)(({ theme }) => ({
 
   overflowY: "auto",
   flexDirection: "row",
+
+  width: "calc(100vw / 5)",
 }));
 
 export const AreaBlock: FC<BlockType> = forwardRef<HTMLDivElement, BlockType>(
@@ -91,7 +93,8 @@ export const SubTypeBlock: FC<BlockType> = (props) => {
         flexDirection: "column",
         alignItems: "start",
         ...(direction === "down" && { height: "100%" }),
-        width: "100%",
+        ...(direction !== "down" && { width: "100%" }),
+        // width: "100%",
       }}
     >
       <Typography variant="h6" color="rgba(28,37,71)">
@@ -104,33 +107,4 @@ export const SubTypeBlock: FC<BlockType> = (props) => {
       </SubTypeBlockGrid>
     </div>
   );
-};
-
-export const ScrollXBlock: FC<{ children: ReactNode }> = (props) => {
-  const { children, ...others } = props;
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      if (ref.current) {
-        const container = ref.current;
-        const amountToScroll = e.deltaY;
-        container.scrollLeft += amountToScroll;
-      }
-    };
-
-    const block = ref.current;
-    if (block) {
-      block.addEventListener("wheel", handleWheel, { passive: false });
-    }
-
-    return () => {
-      if (block) {
-        block.removeEventListener("wheel", handleWheel);
-      }
-    };
-  }, []);
-
-  return <AreaBlock ref={ref}>{children}</AreaBlock>;
 };

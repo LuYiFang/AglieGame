@@ -1,5 +1,4 @@
 import { SxProps, Theme } from "@mui/material";
-import { iteratee } from "lodash";
 import { ReactNode } from "react";
 
 export type actionType = "block" | "item";
@@ -26,15 +25,13 @@ export interface abilityListType {
   name: string;
   value: number | string;
   subType: string;
+  img?: string;
+  level?: string;
+  [key: string]: any;
 }
 
-// export interface abilityListType {
-//   [key: string]: abilityListType[];
-// }
-
 export interface UserItemType {
-  name: string;
-  score: number | string;
+  data: abilityListType;
   onDelete: (...args: any[]) => void;
   onUpdate: (...args: any[]) => void;
 }

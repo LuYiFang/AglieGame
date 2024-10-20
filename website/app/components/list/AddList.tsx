@@ -42,27 +42,23 @@ const SettingList = styled(List)(({ theme }) => ({
 const AddList: ForwardRefRenderFunction<
   any,
   {
-    data?: any[];
+    data: { subTypeList?: any[]; propertyList: any[] };
     showSubType?: boolean;
     onSave?: (...args: any[]) => void;
   }
-> = ({ showSubType = false, data = [] }, ref) => {
-  const [typeList, setTypeList] = useState<any[]>([]);
+> = ({ showSubType = false, data }, ref) => {
+  const [subTypeList, setSubTypeList] = useState<any[]>([]);
   const [propertyList, setPropertyList] = useState<any[]>([]);
 
   useImperativeHandle(ref, () => ({
     getValue: () => {
-      return { typeList, propertyList };
+      return { subTypeList, propertyList };
     },
   }));
 
   useEffect(() => {
-    const [newTypeList, newValueList] = _.partition(
-      data,
-      (v) => v.type === "subType",
-    );
-    setTypeList(newTypeList);
-    setPropertyList(newValueList);
+    setSubTypeList(data?.subTypeList || []);
+    setPropertyList(data?.propertyList || []);
   }, [data]);
 
   return (
@@ -71,8 +67,8 @@ const AddList: ForwardRefRenderFunction<
         {showSubType ? (
           <AddItemListBlock
             blockName={"Sub Type"}
-            targetList={typeList}
-            setTargetList={setTypeList}
+            targetList={subTypeList}
+            setTargetList={setSubTypeList}
             itemDefault={{ name: "" }}
           />
         ) : (
@@ -98,9 +94,6 @@ const AddItemListBlock: FC<{
   itemDefault?: any;
 }> = (props) => {
   const { blockName, targetList, setTargetList, itemDefault } = props;
-
-  //加了什麼?刪了什麼?
-  // 有東西不能刪
 
   const handleAddItem = () => {
     setTargetList([...targetList, { ...itemDefault, id: uuidv4() }]);

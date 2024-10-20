@@ -2,11 +2,12 @@ import { Box, Typography, styled, IconButton } from "@mui/material";
 import { FC, forwardRef, useImperativeHandle, useState } from "react";
 import SettingButton from "../button/SettingButton";
 import Grid from "@mui/material/Grid2";
-import { ItemType } from "../../types/user.types";
+// import Grid from "../block/Grid";
 import { SiFiItem } from "./SifiItem";
 import TextField from "../input/TextField";
 import ClearIcon from "@mui/icons-material/Clear";
 import { SiFiIconButton } from "./SifiItem";
+import { abilityListType, ItemType } from "@/lib/types/user.types";
 
 const EquipmentBox = styled(Box)(({ theme }) => ({
   position: "relative",
@@ -36,18 +37,12 @@ const EquipmentBox = styled(Box)(({ theme }) => ({
 
 export const Equipment: FC<
   ItemType & {
-    score?: string;
+    data: abilityListType;
     onDelete?: (...args: any[]) => void;
     onUpdate?: (...args: any[]) => void;
   }
 > = (props) => {
-  const {
-    name = "",
-    score: imgPath = "",
-    settable = false,
-    onDelete,
-    onUpdate,
-  } = props;
+  const { data = {}, settable = false, onDelete, onUpdate } = props;
 
   return (
     <Grid
@@ -62,7 +57,7 @@ export const Equipment: FC<
       }}
     >
       <SettingButton settable={settable} data={[]} />
-      <SiFiItem text={name} imgPath={imgPath} onUpdate={onUpdate} />
+      <SiFiItem data={data} onUpdate={onUpdate} />
       <SiFiIconButton
         onClick={onDelete}
         sx={{
@@ -87,7 +82,6 @@ const QualityGird = styled(Grid)(({ theme }) => ({
   textAlign: "center",
   fontFamily: "Roboto, sans-serif",
   fontSize: "18px",
-  // fontWeight: 550,
   pt: "6px",
   backgroundColor: "transparent",
   color: "#F6F9FA",
@@ -95,21 +89,20 @@ const QualityGird = styled(Grid)(({ theme }) => ({
 
 export const Quality: FC<
   ItemType & {
-    score?: number | string;
+    data: abilityListType;
     onDelete?: (...args: any[]) => void;
     onUpdate?: (...args: any[]) => void;
   }
 > = forwardRef((props, ref) => {
   const {
-    name: defaultName = "",
-    score: defaultScore = 0,
+    data,
     settable = false,
     onDelete = () => {},
     onUpdate = () => {},
   } = props;
 
-  const [name, setName] = useState<string>(defaultName);
-  const [score, setScore] = useState<number | string>(defaultScore);
+  const [name, setName] = useState<string>(data.name);
+  const [score, setScore] = useState<number | string>(data.value);
 
   useImperativeHandle(ref, () => ({
     getValue: () => ({ name, score }),
@@ -123,7 +116,7 @@ export const Quality: FC<
           inputProps={{ style: { height: "30px", fontWeight: 550 } }}
           onChange={(e) => {
             setName(e.target.value);
-            onUpdate(e.target.value, null);
+            onUpdate({ name: e.target.value });
           }}
         />
       </Grid>
@@ -135,7 +128,7 @@ export const Quality: FC<
           inputProps={{ style: { height: "30px", fontWeight: 550 } }}
           onChange={(e) => {
             setScore(parseInt(e.target.value));
-            onUpdate(null, parseInt(e.target.value));
+            onUpdate({ score: parseInt(e.target.value) });
           }}
           sx={{
             "& ::-webkit-outer-spin-button": {

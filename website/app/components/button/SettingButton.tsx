@@ -58,7 +58,7 @@ const SpeedDialActionTransparent = styled(SpeedDialAction)(({ theme }) => ({
 const SettingButton: FC<{
   settable?: boolean;
   direction?: direction;
-  data: any[];
+  data: { subTypeList?: any[]; propertyList: any[] };
   showSubType?: boolean;
   onSave?: (...args: any[]) => void;
 }> = (props) => {

@@ -1,9 +1,11 @@
-import { Box, Button, IconButton, Popover, styled } from "@mui/material";
+import { Box, Button, IconButton, styled } from "@mui/material";
 import _ from "lodash";
-import { FC, useState } from "react";
-import { transform } from "typescript";
+import { FC, useEffect, useMemo, useState } from "react";
 import TextField from "../input/TextField";
 import AddIcon from "@mui/icons-material/Add";
+import ImageSelector from "../input/ImageSelector";
+import { levelColorMap } from "@/lib/constants";
+import { abilityListType } from "@/lib/types/user.types";
 
 const SIZE = 100;
 
@@ -23,7 +25,7 @@ export const SiFiBox = styled(Box)(({ theme }) => ({
   backgroundColor: "rgba(28,37,71,0.9)",
 }));
 
-const circleColor = "rgba(80, 136, 200, 0.6)"; // 0092f3
+const circleColor = "#1c2547b3";
 
 /* Copyright (c) 2024 by Dhana's Designs (https://codepen.io/Dhanasekarankd/pen/wvPKMXo)
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -31,16 +33,26 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 export const SiFiItem: FC<{
-  text: string;
-  imgPath: string;
+  data: abilityListType;
   style?: { [key: string]: any };
   onUpdate?: (...args: any[]) => void;
-}> = ({ text, style, imgPath, onUpdate = () => {} }) => {
-  const [name, setName] = useState<string>(text);
-  const [anchorEl, setAnchorEl] = useState<SVGImageElement | null>(null);
+}> = ({ data = {}, onUpdate = () => {} }) => {
+  const [name, setName] = useState<string>(data.name);
+  const [score, setScore] = useState<string>("0");
+  const [open, setOpen] = useState<boolean>(false);
 
-  const handleClose = () => {
-    setAnchorEl(null);
+  const levelColor = useMemo(() => levelColorMap[data.level], [data.level]);
+
+  useEffect(() => {
+    setName(data.name);
+  }, [data.name]);
+
+  useEffect(() => {
+    setScore(data.value);
+  }, [data.value]);
+
+  const openFileSelector = () => {
+    setOpen(true);
   };
 
   return (
@@ -48,7 +60,7 @@ export const SiFiItem: FC<{
       <div
         style={{
           width: "100%",
-          height: 80,
+          height: "100%",
           display: "flex",
           position: "relative",
           alignItems: "center",
@@ -59,10 +71,10 @@ export const SiFiItem: FC<{
           viewBox="0 0 300 300"
           shapeRendering="geometricPrecision"
           textRendering="geometricPrecision"
-          height="100"
-          width="100"
+          height="110%"
           style={{
             minWidth: 80,
+            zIndex: 1,
           }}
         >
           <g id="fireCircles">
@@ -87,24 +99,24 @@ export const SiFiItem: FC<{
             >
               <path
                 d="M109,269.5l3-10c-7.749-1.9-11.855-3.713-19.0001-7.5l-1.5,2c-29.7052-13.227-43.5219-26.425-61-59l3-1.5c-3.9435-5.961-4.9342-9.706-6.5-17l-10.5,4c1.4714,6.863,2.7194,10.693,5.5,17.5l3.5-1c17.6217,33.53,31.7616,46.358,62.5,61.5l-1,3c7.6774,4.415,12.4224,6.268,22.0001,8Z"
-                fill="#1c2547e6"
+                fill={levelColor}
               />
               <path
                 d="M179,258.5l3.5,9c-3.646,2-5.954,2.647-10.5,3l-3-9c0,0,6.437-1.018,10-3Z"
-                fill="#1c2547e6"
+                fill={levelColor}
               />
               <path
                 d="M199.5,250.5c3.78-2.096,5.647-3.3,8.5-5.5l5.5,7.5c-3.068,2.6-5.187,3.897-9.5,6l-4.5-8Z"
-                fill="#1c2547e6"
+                fill={levelColor}
               />
               <path
                 d="M72.9999,31l8.5-6l5.5,9.5-9.5,5.5-4.5-9Z"
-                fill="#1c2547e6"
+                fill={levelColor}
               />
-              <path d="M103,16l8.5-3l4.5,9-9,3-4-9Z" fill="#1c2547e6" />
+              <path d="M103,16l8.5-3l4.5,9-9,3-4-9Z" fill={levelColor} />
               <path
                 d="M176,14l-1.5,11c8.199,2.3423,12.122,4.1035,19,7l1.5-2.5c31.337,16.0454,44.302,29.1144,60,59L252.5,90l6.5,15.5l9.5-3-6-16.5-3.5,1c-15.528-31.9354-28.84-45.3346-61-61l1-3.5c-8.177-3.8579-13.061-5.8207-23-8.5Z"
-                fill="#1c2547e6"
+                fill={levelColor}
               />
               <path
                 d="M184,256.5c4.077-1.132,6.255-2.039,10-4l5,9c-4.586,2.635-6.882,3.613-10.5,4.5l-4.5-9.5Z"
@@ -120,7 +132,7 @@ export const SiFiItem: FC<{
               />
               <path
                 d="M86.9999,22l9-4L101.5,27l-9.0001,5-5.5-10Z"
-                fill="#0092f3"
+                fill={circleColor}
               />
               <path
                 d="M176,14c-22.255-5.11265-34.544-5.86404-56-2l1,10c20.521-3.729,32.63-2.2006,53.5,3L176,14Z"
@@ -148,42 +160,70 @@ export const SiFiItem: FC<{
               <circle cx="100" cy="100" r="100" />
             </clipPath>
           </defs>
-          <image
-            transform="translate(45 42)"
-            href={imgPath}
-            height="200"
-            width="200"
-            clipPath="url(#circleView)"
-            onDoubleClick={(event: React.MouseEvent<SVGImageElement>) => {
-              console.log("double!");
-              setAnchorEl(event.currentTarget);
+          <ImageSelector
+            defaultImg={data.img}
+            open={open}
+            onClose={() => setOpen(false)}
+            onSave={(fileUrl) => onUpdate({ img: fileUrl })}
+            tagType="svg"
+            imgProps={{
+              transform: "translate(45 42)",
+              height: "200",
+              width: "200",
+              clipPath: "url(#circleView)",
+              onDoubleClick: openFileSelector,
             }}
           />
         </svg>
-        <TextField
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-            onUpdate(e.target.value, null);
-          }}
-          sx={{
-            width: "100%",
-            zIndex: 2,
-            fontSize: (SIZE * 35) / 180,
-            fontWeight: "bold",
-            color: "#e9e9e9",
-            letterSpacing: 1,
-            paddingBottom: "10px",
-            paddingRight: 2,
-            marginLeft: 2,
-            marginRight: 1,
-          }}
-          inputProps={{
-            style: {
-              textAlign: "start",
-            },
-          }}
-        />
+        <div style={{ marginLeft: "0.5rem", marginRight: "2rem" }}>
+          <TextField
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              onUpdate({ name: e.target.value });
+            }}
+            sx={{
+              width: "100%",
+              zIndex: 2,
+              fontSize: (SIZE * 35) / 180,
+              fontWeight: "bold",
+              color: "#e9e9e9",
+              letterSpacing: 1,
+              paddingBottom: "10px",
+              paddingRight: 2,
+              // marginLeft: 2,
+              marginRight: 1,
+            }}
+            inputProps={{
+              style: {
+                textAlign: "start",
+              },
+            }}
+          />
+
+          <Box
+            sx={{
+              width: "100%",
+              height: 6,
+              backgroundColor: circleColor,
+              position: "relative",
+              borderRadius: "2px",
+            }}
+          >
+            <Box
+              sx={{
+                backgroundColor: "#fff",
+                width: `${score}%`,
+                height: "100%",
+                transition: "width 2s ease",
+                position: "absolute",
+                left: 0,
+                borderRadius: "2px",
+              }}
+            />
+          </Box>
+        </div>
+
         <svg
           viewBox="0 0 1036 300"
           shapeRendering="geometricPrecision"
@@ -192,61 +232,24 @@ export const SiFiItem: FC<{
             position: "absolute",
             height: "100%",
             right: 5,
+            zIndex: 0,
           }}
         >
           <g id="container" style={{ isolation: "isolate" }}>
             <path
               id="containerRightBottom"
               d="M1034.5,108h-2l-.5,67c-3.32,8.487-5.85,12.783-11,20l-72.5,72.5c-8.257,7.176-13.852,10.104-25,14h-66v2v2.5l66-.5c13.323-4.081,19.832-7.941,29.5-18l72-72.5c5.51-7.215,7.93-11.591,11-20v-67h-1.5Z"
-              fill="#0092f3"
+              fill={circleColor}
             />
             <path
               id="containerRightTop"
               d="M967,0v2h53c10.24,2.15585,13.04,5.37166,13,14.5v25.25v25.25h1.5h1.5v-50.5c-.49-12.43488-4.12-15.921665-16-16.5h-53Z"
               transform="translate(0 2)"
-              fill="#0092f3"
+              fill={circleColor}
             />
           </g>
         </svg>
       </div>
-      <Popover
-        open={Boolean(anchorEl)}
-        anchorEl={anchorEl}
-        onClose={handleClose}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "left",
-        }}
-        PaperProps={{
-          sx: {
-            backgroundColor: "#222B4C",
-            border: "1px solid #4a5681",
-            color: "#fff",
-          },
-        }}
-      >
-        <Box
-          sx={{
-            height: 30,
-            minWidth: 200,
-            m: 1,
-            mx: 2,
-            position: "relative",
-          }}
-        >
-          <TextField
-            value={imgPath}
-            sx={{
-              position: "absolute",
-              height: "100%",
-            }}
-            placeholder="Image url"
-            onChange={(e) => {
-              onUpdate(null, e.target.value);
-            }}
-          />
-        </Box>
-      </Popover>
     </>
   );
 };

@@ -5,6 +5,8 @@ import { Box, IconButton, Typography } from "@mui/material";
 import TextField from "../input/TextField";
 import ClearIcon from "@mui/icons-material/Clear";
 import { SiFiIconButton } from "../item/SifiItem";
+import { levelColorMap } from "@/lib/constants";
+import { abilityListType } from "@/lib/types/user.types";
 
 const SIZE = 100;
 const strokeDashoffset = (SIZE * 503) / 180;
@@ -19,7 +21,7 @@ const Block = styled("div")(({ theme }) => ({
   borderRadius: "50%",
 }));
 
-const Edge = styled("div")(({ theme }) => ({
+const Edge = styled("div")(({ theme, color }) => ({
   position: "relative",
   display: "flex",
   alignItems: "center",
@@ -29,7 +31,7 @@ const Edge = styled("div")(({ theme }) => ({
   height: `calc(100% - ${(SIZE * 50) / 180}px)`,
   borderRadius: "50%",
   backgroundColor: "#1c2547b3",
-  boxShadow: `0 0 ${(SIZE * 5) / 180}px ${(SIZE * 3) / 180}px #507b9b`,
+  boxShadow: `0 0 ${(SIZE * 5) / 180}px ${(SIZE * 3) / 180}px ${color}`,
   "&::before": {
     position: "absolute",
     content: '""',
@@ -82,21 +84,22 @@ const Circle = styled("circle")(({ theme }) => ({
 }));
 
 const SkillCircular: FC<{
-  name?: string;
-  score?: number | string;
+  data: abilityListType;
   onDelete?: (...args: any[]) => void;
   onUpdate?: (...args: any[]) => void;
 }> = (props) => {
   const {
-    name: defaultName = "",
-    score: defaultScore = 0,
+    // name: defaultName = "",
+    // score: defaultScore = 0,
+    // level = "common",
+    data,
     onDelete = () => {},
     onUpdate = () => {},
   } = props;
 
-  const [name, setName] = useState<string>(defaultName);
+  const [name, setName] = useState<string>(data.name);
   const [score, setScore] = useState<number>(
-    parseInt(`${defaultScore}`) as number,
+    parseInt(`${data.value}`) as number,
   );
 
   const circleRef = useRef<SVGCircleElement | null>(null);
@@ -153,7 +156,7 @@ const SkillCircular: FC<{
         <ClearIcon />
       </IconButton>
       <Block>
-        <Edge>
+        <Edge color={levelColorMap[data.level]}>
           <div
             style={{
               padding: 10,
@@ -165,7 +168,7 @@ const SkillCircular: FC<{
               value={score}
               onChange={(e) => {
                 setScore(parseInt(e.target.value));
-                onUpdate(null, e.target.value);
+                onUpdate({ score: e.target.value });
               }}
               sx={{
                 zIndex: 2,
@@ -218,7 +221,7 @@ const SkillCircular: FC<{
         value={name}
         onChange={(e) => {
           setName(e.target.value);
-          onUpdate(e.target.value, null);
+          onUpdate({ name: e.target.value });
         }}
         inputProps={{
           style: {
