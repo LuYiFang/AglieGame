@@ -163,7 +163,7 @@ export const EditTags = () => {
                 position: "absolute",
                 bottom: 8,
                 display: "flex",
-                justifyContent: "start",
+                justifyContent: "space-between",
                 width: "100%",
                 flexWrap: "wrap",
                 alignItems: "end",
@@ -188,57 +188,71 @@ export const EditTags = () => {
               >
                 E
               </Box>
-              {_.map(valueList, (v) => {
-                return (
-                  <Box key={v.name} sx={{ position: "relative" }}>
-                    <TextField
-                      value={v.name}
-                      sx={{
-                        mr: "2px",
-                        borderRadius: 0,
-                        fontSize: 16,
-                        height: 48,
-                        border: "1px solid #80B0D8",
-                        boxShadow: "0 0 5px #125585",
-                        backgroundColor: "rgba(28,37,71,0.9)",
-                        color: "#F6F9FA",
-                        width: "fit-content",
-                      }}
-                      inputProps={{
-                        style: {
-                          textAlign: "center",
-                          color: "#fff",
-                          paddingRight: 4,
-                          paddingLeft: 4,
-                          width: `${v.name.length + 2}ch`,
-                          minWidth: 50,
-                        },
-                      }}
-                      onChange={(e) => {
-                        handleUpdateItem(v.id);
-                      }}
-                    />
-                    <SiFiIconButton
-                      edge="end"
-                      aria-label="delete"
-                      onClick={() => handleDeleteItem(v.id)}
-                      sx={{
-                        position: "absolute",
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: 15,
-                      }}
+              <Box
+                sx={{
+                  flex: 5,
+                  display: "flex",
+                  justifyContent: "center",
+                  width: "100%",
+                  flexWrap: "wrap",
+                  alignItems: "end",
+                }}
+              >
+                {_.map(valueList, (v) => {
+                  return (
+                    <Box
+                      key={v.name}
+                      sx={{ position: "relative", marginRight: "4px" }}
                     >
-                      <ClearIcon sx={{ height: "0.8em", width: "0.8em" }} />
-                    </SiFiIconButton>
-                    <SifiAddButton
-                      direction={"down"}
-                      onAdd={() => () => handleAddItem("")}
-                    />
-                  </Box>
-                );
-              })}
+                      <TextField
+                        value={v.name}
+                        sx={{
+                          mr: "2px",
+                          borderRadius: 0,
+                          fontSize: 16,
+                          height: 48,
+                          border: "1px solid #80B0D8",
+                          boxShadow: "0 0 5px #125585",
+                          backgroundColor: "rgba(28,37,71,0.9)",
+                          color: "#F6F9FA",
+                          width: "fit-content",
+                        }}
+                        inputProps={{
+                          style: {
+                            textAlign: "center",
+                            color: "#fff",
+                            paddingRight: 4,
+                            paddingLeft: 4,
+                            width: `${v.name.length + 2}ch`,
+                            minWidth: 50,
+                          },
+                        }}
+                        onChange={(e) => {
+                          handleUpdateItem(v.id);
+                        }}
+                      />
+                      <SiFiIconButton
+                        edge="end"
+                        aria-label="delete"
+                        onClick={() => handleDeleteItem(v.id)}
+                        sx={{
+                          position: "absolute",
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: 15,
+                        }}
+                      >
+                        <ClearIcon sx={{ height: "0.8em", width: "0.8em" }} />
+                      </SiFiIconButton>
+                      <SifiAddButton
+                        direction={"down"}
+                        onAdd={() => () => handleAddItem("")}
+                      />
+                    </Box>
+                  );
+                })}
+              </Box>
             </Box>
           );
         }}
@@ -297,8 +311,8 @@ export const EditRadar = () => {
     <Box
       sx={{
         position: "absolute",
-        top: 24,
-        right: 0,
+        top: 40,
+        right: 20,
         width: 200,
         height: 200,
         backgroundColor: "transparent",
@@ -325,7 +339,7 @@ export const EditMiddle = () => {
   const healthRef = useRef();
 
   const img = useMemo(() => {
-    return _.first(valueList)?.value || "";
+    return _.first(valueList)?.value;
   }, [valueList]);
 
   const openFileSelector = () => {
@@ -352,15 +366,6 @@ export const EditMiddle = () => {
         direction="down"
         sx={{ backgroundColor: "#FBFBFB", overflowX: "visible" }}
       >
-        <HealthBar
-          ref={healthRef}
-          sx={{
-            position: "absolute",
-            top: 10,
-            left: 30,
-            right: 30,
-          }}
-        />
         <Box
           sx={(theme) => ({
             backgroundColor: "transparent",
@@ -384,14 +389,23 @@ export const EditMiddle = () => {
             onSave={handleSave}
             imgProps={{
               style: {
-                maxHeight: `calc(100vh - ${skillHeight + 32}px)`,
-                width: "calc(100vw - 20vw)",
-                left: "10vw",
+                maxHeight: `calc(100vh - ${48}px)`,
+                width: `calc(100vh - ${48}px)`,
+                left: `calc(calc(100vw - calc(100vh - ${48}px)) / 2)`,
                 position: "fixed",
               },
             }}
           />
         </Box>
+        <HealthBar
+          ref={healthRef}
+          sx={{
+            position: "absolute",
+            top: 10,
+            left: 30,
+            right: 30,
+          }}
+        />
         <EditTags />
         <EditRadar />
       </AreaBlock>

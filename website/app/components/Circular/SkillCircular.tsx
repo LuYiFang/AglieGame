@@ -30,7 +30,7 @@ const Edge = styled("div")(({ theme, color }) => ({
   width: `calc(100% - ${(SIZE * 50) / 180}px)`,
   height: `calc(100% - ${(SIZE * 50) / 180}px)`,
   borderRadius: "50%",
-  backgroundColor: "#1c2547b3",
+  backgroundColor: theme.palette.primary.main,
   boxShadow: `0 0 ${(SIZE * 5) / 180}px ${(SIZE * 3) / 180}px ${color}`,
   "&::before": {
     position: "absolute",
@@ -88,14 +88,7 @@ const SkillCircular: FC<{
   onDelete?: (...args: any[]) => void;
   onUpdate?: (...args: any[]) => void;
 }> = (props) => {
-  const {
-    // name: defaultName = "",
-    // score: defaultScore = 0,
-    // level = "common",
-    data,
-    onDelete = () => {},
-    onUpdate = () => {},
-  } = props;
+  const { data, onDelete = () => {}, onUpdate = () => {} } = props;
 
   const [name, setName] = useState<string>(data.name);
   const [score, setScore] = useState<number>(

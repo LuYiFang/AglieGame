@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 import { StoreProvider } from "./StoreProvider";
+import { AppRouterCacheProvider } from "@mui/material-nextjs/v14-appRouter";
 
 import "./styles/globals.css";
 import styles from "./styles/layout.module.css";
-import { GlobalStyles } from "@mui/material";
+import { GlobalStyles, ThemeProvider } from "@mui/material";
+import theme from "@/lib/theme/theme";
 
 interface Props {
   readonly children: ReactNode;
@@ -12,31 +14,13 @@ interface Props {
 export default function RootLayout({ children }: Props) {
   return (
     <StoreProvider>
-      <GlobalStyles
-        styles={{
-          "*::-webkit-scrollbar": {
-            width: 0,
-            height: 0,
-          },
-          "*::-webkit-scrollbar-thumb": {
-            backgroundColor: "#4b6a91",
-            borderRadius: 10,
-          },
-          "*::-webkit-scrollbar-track": {
-            backgroundColor: "transparent",
-          },
-          "*:hover::-webkit-scrollbar": {
-            height: 10,
-            width: 10,
-          },
-          "*::-webkit-scrollbar-thumb:hover": {
-            borderRadius: 10,
-          },
-        }}
-      />
       <html lang="en">
         <body>
-          <main className={styles.main}>{children}</main>
+          <AppRouterCacheProvider>
+            <ThemeProvider theme={theme}>
+              <main className={styles.main}>{children}</main>
+            </ThemeProvider>
+          </AppRouterCacheProvider>
         </body>
       </html>
     </StoreProvider>

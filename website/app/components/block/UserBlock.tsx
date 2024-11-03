@@ -26,7 +26,7 @@ const AreaBlockGrid = styled(Grid)(({ theme }) => ({
   justifyContent: "start",
   alignItems: "start",
   position: "relative",
-  backgroundColor: "rgba(80, 136, 200, 0.6)",
+  backgroundColor: `${theme.palette.primary.light}`,
 
   overflowY: "auto",
   flexDirection: "row",
@@ -70,9 +70,9 @@ const SubTypeBlockGrid = styled(Grid)(({ theme }) => ({
   marginBottom: theme.spacing(1),
   display: "flex",
   position: "relative",
-  border: "1px solid #80B0D8",
+  border: `1px solid ${theme.palette.border.main}`,
   boxShadow: "0 0 5px #125585",
-  backgroundColor: "rgba(28,37,71,0.7)",
+  backgroundColor: `${theme.palette.primary.main}`,
 }));
 
 export const SubTypeBlock: FC<BlockType> = (props) => {
